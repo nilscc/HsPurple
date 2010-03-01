@@ -16,6 +16,9 @@ module HsPurple.EventLoop
     , setUiOps
     , getUiOps
 
+    -- * Types
+    , EventLoopUiOps (..)
+
     ) where
 
 import Foreign
