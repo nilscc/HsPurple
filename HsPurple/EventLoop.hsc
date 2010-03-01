@@ -32,6 +32,7 @@ module HsPurple.EventLoop
 
 import Foreign
 import Foreign.C
+import Foreign.C.Error
 import Foreign.Ptr
 import Foreign.Storable
 import Foreign.Marshal.Alloc
@@ -56,37 +57,38 @@ data InputCondition = InputRead
                     | InputWrite
 
 type Handle   = Int
-type Error    = Int
+type CBool    = CInt
 type UserData = Ptr ()
+type ErrPtr   = Ptr CInt
 
 -- From Bindings.GLib: @type C'GSourceFunc = FunPtr (C'gpointer -> IO C'gboolean)@
 type CGSourceFunc = UserData -> IO CInt
-type GSourceFunc = UserData -> IO Int
+type GSourceFunc  = UserData -> IO Int
 
 -- | The type of callbacks to handle events on file descriptors, as passed to
 -- purple_input_add().  The callback will receive the user_data passed to
 -- purple_input_add(), the file descriptor on which the event occurred, and the
 -- condition that was satisfied to cause the callback to be invoked.
 type CInputFunc = UserData -> CInt -> CInt -> IO ()
-type InputFunc = UserData -> Int -> Int -> IO ()
+type InputFunc  = UserData -> Int -> InputCondition -> IO ()
 
-type CBool = CInt
+
 
 -- | C function types
-type CTimeoutAdd         = CInt -> FunPtr CGSourceFunc -> UserData -> IO CInt
-type CTimeoutAddSeconds  = CInt -> FunPtr CGSourceFunc -> UserData -> IO CInt
-type CTimeoutRemove      = CInt -> IO CBool
-type CInputAdd           = CInt -> CInt -> FunPtr CInputFunc -> UserData -> IO CInt
-type CInputRemove        = CInt -> IO CBool
-type CInputGetError      = CInt -> Ptr CInt -> IO CInt
+type CTimeoutAdd        = CUInt -> FunPtr CGSourceFunc -> UserData -> IO CUInt
+type CTimeoutAddSeconds = CUInt -> FunPtr CGSourceFunc -> UserData -> IO CUInt
+type CInputAdd          = CInt -> CInt -> FunPtr CInputFunc -> UserData -> IO CUInt
+type CTimeoutRemove     = CInt -> IO CBool
+type CInputRemove       = CInt -> IO CBool
+type CInputGetError     = CInt -> Ptr CInt -> IO CInt
 
 -- | Haskell function types
 type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO Int
 type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO Int
-type TimeoutRemove      = Int -> IO Bool
-type InputAdd           = Int -> Int -> InputFunc -> UserData -> IO Int
-type InputRemove        = Int -> IO Bool
-type InputGetError      = Int -> Ptr CInt -> IO Int
+type InputAdd           = Fd  -> InputCondition -> InputFunc -> UserData -> IO Int
+type TimeoutRemove      = Handle -> IO Bool
+type InputRemove        = Handle -> IO Bool
+type InputGetError      = Fd  -> ErrPtr -> IO Errno
 
 
 
@@ -114,7 +116,11 @@ cGSourceFunc :: CGSourceFunc -> GSourceFunc
 cGSourceFunc f = fmap fi . f
 
 cInputFunc :: CInputFunc -> InputFunc
-cInputFunc f = \u ci1 ci2 -> f u (fi ci1) (fi ci2)
+cInputFunc f = \u ci1 ci2 -> f u (fi ci1) (cond ci2)
+
+  where cond i = case i of
+                      InputRead  -> 1 -- 1 << 0
+                      InputWrite -> 2 -- 1 << 1
 
 
 
@@ -126,7 +132,11 @@ hGSourceFunc :: GSourceFunc -> CGSourceFunc
 hGSourceFunc f = fmap fi . f
 
 hInputFunc :: InputFunc -> CInputFunc
-hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (fi ci2)
+hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (cond ci2)
+
+  where cond i = case i of
+                      1 -> InputRead  -- 1 << 0
+                      2 -> InputWrite -- 1 << 1
 
 hTimeoutAdd :: TimeoutAdd -> CTimeoutAdd
 hTimeoutAdd f = \ci cgs ud ->
@@ -142,7 +152,11 @@ hTimeoutRemove f = \ci ->
 
 hInputAdd :: InputAdd -> CInputAdd
 hInputAdd f = \ci1 ci2 cif ud ->
-    fi `fmap` f (fi ci1) (fi ci2) (cInputFunc $ c_get_input_func cif) ud
+    fi `fmap` f (Fd $ fi ci1) (cond $ fi ci2) (cInputFunc $ c_get_input_func cif) ud
+
+  where cond i = case i of
+                      1 -> InputRead  -- 1 << 0
+                      2 -> InputWrite -- 1 << 1
 
 hInputRemove :: InputRemove -> CInputRemove
 hInputRemove f = \ci ->
@@ -150,7 +164,8 @@ hInputRemove f = \ci ->
 
 hInputGetError :: InputGetError -> CInputGetError
 hInputGetError f = \ci ptr ->
-    fi `fmap` f (fi ci) ptr
+    unErrno `fmap` f (Fd $ fi ci) ptr
+  where unErrno (Errno e) = e
 
 
 
@@ -285,10 +300,9 @@ getError (Fd fd) errPtr =
 -- | Sets the UI operations structure to be used for accounts.
 setUiOps :: EventLoopUiOps -> IO ()
 setUiOps eventLoopUiOps = do
-    error "Not implemented"
-    -- ptr     <- malloc
-    -- poke ptr eventLoopUiOps
-    -- c_set_ui_ops ptr
+    ptr     <- malloc
+    poke ptr eventLoopUiOps
+    c_set_ui_ops ptr
 
 -- | Returns the UI operations structure used for accounts.
 getUiOps :: IO (Ptr EventLoopUiOps)
@@ -351,8 +365,8 @@ instance Storable EventLoopUiOps where
         (#poke struct _PurpleEventLoopUiOps, input_remove)           ptr i_rem
         (#poke struct _PurpleEventLoopUiOps, input_get_error)        ptr i_err
 
-        (#poke struct _PurpleEventLoopUiOps, _purple_reserved2)      ptr ((#const NULL) :: CInt)
-        (#poke struct _PurpleEventLoopUiOps, _purple_reserved3)      ptr ((#const NULL) :: CInt)
-        (#poke struct _PurpleEventLoopUiOps, _purple_reserved4)      ptr ((#const NULL) :: CInt)
+        (#poke struct _PurpleEventLoopUiOps, _purple_reserved2)      ptr nullPtr
+        (#poke struct _PurpleEventLoopUiOps, _purple_reserved3)      ptr nullPtr
+        (#poke struct _PurpleEventLoopUiOps, _purple_reserved4)      ptr nullPtr
 
 -- vim: ft=haskell
