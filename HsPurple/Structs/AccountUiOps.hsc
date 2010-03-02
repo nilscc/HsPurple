@@ -16,9 +16,6 @@ import Foreign.C
 import Foreign.Ptr
 import Foreign
 
-import HsPurple.Structs.Account
-import HsPurple.Structs.Status
-
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>
 
@@ -32,19 +29,22 @@ data AccountUiOps = AccountUiOps
     , closeAccountRequest   :: CloseAccountRequest
     }
 
+type Account = Ptr ()
+type Status = Ptr ()
+
 instance Storable AccountUiOps where
     sizeOf _    = #size    PurpleAccountUiOps
     alignment _ = #alignof PurpleAccountUiOps
     peek ptr    = do
 
-        notify   <- (#peek PurpleAccountUiOps, notify_added) ptr            >>= c_get_notify_added
-        status   <- (#peek PurpleAccountUiOps, status_changed) ptr          >>= c_get_status_changed
-        req_add  <- (#peek PurpleAccountUiOps, request_add) ptr             >>= c_get_request_add
-        req_auth <- (#peek PurpleAccountUiOps, request_authorize) ptr       >>= c_get_request_authorize
-        close    <- (#peek PurpleAccountUiOps, close_account_request) ptr   >>= c_get_close_account_request
+        notify   <- c_get_notify_added `fmap` (#peek PurpleAccountUiOps, notify_added) ptr
+        status   <- c_get_status_changed `fmap` (#peek PurpleAccountUiOps, status_changed) ptr
+        req_add  <- c_get_request_add `fmap` (#peek PurpleAccountUiOps, request_add) ptr
+        req_auth <- c_get_request_authorize `fmap` (#peek PurpleAccountUiOps, request_authorize) ptr
+        close    <- c_get_close_account_request `fmap` (#peek PurpleAccountUiOps, close_account_request) ptr
 
         return $ AccountUiOps (cNotifyAdded notify)
-                              (cStatusChanged status)
+                              status
                               (cRequestAdd req_add)
                               (cRequestAuthorize req_auth)
                               close
@@ -52,7 +52,7 @@ instance Storable AccountUiOps where
     poke ptr (AccountUiOps notify status req_add req_auth close) = do
 
         c_mk_notify_added (hNotifyAdded notify)             >>= (#poke PurpleAccountUiOps, notify_added) ptr
-        c_mk_status_changed (hStatusChanged status)         >>= (#poke PurpleAccountUiOps, status_changed) ptr
+        c_mk_status_changed status                          >>= (#poke PurpleAccountUiOps, status_changed) ptr
         c_mk_request_add (hRequestAdd req_add)              >>= (#poke PurpleAccountUiOps, request_add) ptr
         c_mk_request_authorize (hRequestAuthorize req_auth) >>= (#poke PurpleAccountUiOps, request_authorize) ptr
         c_mk_close_account_request close                    >>= (#poke PurpleAccountUiOps, close_account_request) ptr
@@ -76,7 +76,7 @@ type NotifyAdded = Account
                 -> Message
                 -> IO ()
 
-type CNotifyAdded = Ptr Account
+type CNotifyAdded = Account
                  -> CString
                  -> CString
                  -> CString
@@ -84,28 +84,26 @@ type CNotifyAdded = Ptr Account
                  -> IO ()
 
 cNotifyAdded :: CNotifyAdded -> NotifyAdded
-cNotifyAdded f = \ptr cs1 cs2 cs3 cs4 -> do
-    acc <- peek ptr
-    s1  <- peekCString cs1
-    s2  <- peekCString cs2
-    s3  <- peekCString cs3
-    s4  <- peekCString cs4
-    f acc s1 s2 s3 s4
-
-hNotifyAdded :: NotifyAdded -> CNotifyAdded
-hNotifyAdded f = \acc s1 s2 s3 s4 -> alloca $ \ptr -> do
-    poke ptr acc
+cNotifyAdded f = \acc s1 s2 s3 s4 -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
     cs3 <- newCString s3
     cs4 <- newCString s4
-    f ptr cs1 cs2 cs3 cs4
+    f acc cs1 cs2 cs3 cs4
+
+hNotifyAdded :: NotifyAdded -> CNotifyAdded
+hNotifyAdded f = \ptr cs1 cs2 cs3 cs4 -> do
+    s1  <- peekCString cs1
+    s2  <- peekCString cs2
+    s3  <- peekCString cs3
+    s4  <- peekCString cs4
+    f ptr s1 s2 s3 s4
 
 foreign import ccall "wrapper"
     c_mk_notify_added :: CNotifyAdded -> IO (FunPtr CNotifyAdded)
 
 foreign import ccall "dynamic"
-    c_get_notify_added :: FunPtr CNotifyAdded -> IO CNotifyAdded
+    c_get_notify_added :: FunPtr CNotifyAdded -> CNotifyAdded
 
 
 -- | This account's status changed
@@ -113,29 +111,11 @@ type StatusChanged = Account
                   -> Status
                   -> IO ()
 
-type CStatusChanged = Ptr Account
-                   -> Ptr Status
-                   -> IO ()
-
-cStatusChanged :: CStatusChanged -> StatusChanged
-cStatusChanged f = \ptr1 ptr2 -> do
-    acc   <- peek ptr1
-    state <- peek ptr2
-    f acc state
-
-hStatusChanged :: CStatusChanged -> StatusChanged
-hStatusChanged f = \acc state ->
-    alloca $ \ptr1 ->
-        alloca $ \ptr2 -> do
-            poke ptr1 acc
-            poke ptr2 state
-            f ptr1 ptr2
-
 foreign import ccall "wrapper"
-    c_mk_status_changed :: CStatusChanged -> IO (FunPtr CStatusChanged)
+    c_mk_status_changed :: StatusChanged -> IO (FunPtr StatusChanged)
 
 foreign import ccall "dynamic"
-    c_get_status_changed :: FunPtr CStatusChanged -> IO CStatusChanged
+    c_get_status_changed :: FunPtr StatusChanged -> StatusChanged
 
 
 -- | Someone we don't have on our list added us; prompt to add them.
@@ -146,7 +126,7 @@ type RequestAdd = Account
                -> Message
                -> IO ()
 
-type CRequestAdd = Ptr Account
+type CRequestAdd = Account
                 -> CString
                 -> CString
                 -> CString
@@ -154,47 +134,26 @@ type CRequestAdd = Ptr Account
                 -> IO ()
 
 cRequestAdd :: CRequestAdd -> RequestAdd
-cRequestAdd f = \ptr cs1 cs2 cs3 cs4 -> do
-    acc <- peek ptr
-    s1  <- peekCString cs1
-    s2  <- peekCString cs2
-    s3  <- peekCString cs3
-    s4  <- peekCString cs4
-    f acc s1 s2 s3 s4
-
-hRequestAdd :: RequestAdd -> CRequestAdd
-hRequestAdd f = \acc s1 s2 s3 s4 -> alloca $ \ptr -> do
-    poke ptr acc
+cRequestAdd f = \acc s1 s2 s3 s4 -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
     cs3 <- newCString s3
     cs4 <- newCString s4
-    f ptr cs1 cs2 cs3 cs4
+    f acc cs1 cs2 cs3 cs4
+
+hRequestAdd :: RequestAdd -> CRequestAdd
+hRequestAdd f = \ptr cs1 cs2 cs3 cs4 -> do
+    s1  <- peekCString cs1
+    s2  <- peekCString cs2
+    s3  <- peekCString cs3
+    s4  <- peekCString cs4
+    f ptr s1 s2 s3 s4
 
 foreign import ccall "wrapper"
     c_mk_request_add :: CRequestAdd -> IO (FunPtr CRequestAdd)
 
 foreign import ccall "dynamic"
-    c_get_request_add :: FunPtr CRequestAdd -> IO CRequestAdd
-
-{-
-
-	/** Prompt for authorization when someone adds this account to their buddy
-	 * list.  To authorize them to see this account's presence, call \a
-	 * authorize_cb (\a user_data); otherwise call \a deny_cb (\a user_data);
-	 * @return a UI-specific handle, as passed to #close_account_request.
-	 */
-	void *(*request_authorize)(PurpleAccount *account,
-	                           const char *remote_user,
-	                           const char *id,
-	                           const char *alias,
-	                           const char *message,
-	                           gboolean on_list,
-	                           PurpleAccountRequestAuthorizationCb authorize_cb,
-	                           PurpleAccountRequestAuthorizationCb deny_cb,
-	                           void *user_data);
-
--}
+    c_get_request_add :: FunPtr CRequestAdd -> CRequestAdd
 
 type OnList      = Bool
 type UserData    = Ptr ()
@@ -207,7 +166,7 @@ type DenyCb      = UIHandle -> IO ()
 
 foreign import ccall "dynamic"
     c_get_account_request_autorization_cb :: FunPtr AccountRequestAuthorizationCb
-                                          -> IO AccountRequestAuthorizationCb
+                                          -> AccountRequestAuthorizationCb
 
 foreign import ccall "wrapper"
     c_mk_account_request_autorization_cb :: AccountRequestAuthorizationCb
@@ -228,7 +187,7 @@ type RequestAuthorize = Account
                      -> UserData
                      -> IO ()
 
-type CRequestAuthorize = Ptr Account
+type CRequestAuthorize = Account
                       -> CString
                       -> CString
                       -> CString
@@ -240,34 +199,32 @@ type CRequestAuthorize = Ptr Account
                       -> IO ()
 
 cRequestAuthorize :: CRequestAuthorize -> RequestAuthorize
-cRequestAuthorize f = \ptr cs1 cs2 cs3 cs4 ci fp1 fp2 ud -> do
-    acc <- peek ptr
+hRequestAuthorize f = \ptr cs1 cs2 cs3 cs4 ci fp1 fp2 ud -> do
     s1  <- peekCString cs1
     s2  <- peekCString cs2
     s3  <- peekCString cs3
     s4  <- peekCString cs4
-    let i = fromIntegral ci
-    f1 <- c_get_account_request_autorization_cb fp1
-    f2 <- c_get_account_request_autorization_cb fp2
-    f acc s1 s2 s3 s4 i f1 f2 ud
+    let i = 1 == ci
+        f1 = c_get_account_request_autorization_cb fp1
+        f2 = c_get_account_request_autorization_cb fp2
+    f ptr s1 s2 s3 s4 i f1 f2 ud
 
 hRequestAuthorize :: RequestAuthorize -> CRequestAuthorize
-hRequestAuthorize f = \acc s1 s2 s3 s4 i f1 f2 ud -> alloca $ \ptr -> do
-    poke ptr acc
+cRequestAuthorize f = \acc s1 s2 s3 s4 lis f1 f2 ud -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
     cs3 <- newCString s3
     cs4 <- newCString s4
-    let ci = fromIntegral i
+    let ci = if lis then 1 else 0
     fp1 <- c_mk_account_request_autorization_cb f1
     fp2 <- c_mk_account_request_autorization_cb f2
-    f ptr cs1 cs2 cs3 cs4 ci fp1 fp2 ud
+    f acc cs1 cs2 cs3 cs4 ci fp1 fp2 ud
 
 foreign import ccall "wrapper"
     c_mk_request_authorize :: CRequestAuthorize -> IO (FunPtr CRequestAuthorize)
 
 foreign import ccall "dynamic"
-    c_get_request_authorize :: FunPtr CRequestAuthorize -> IO CRequestAuthorize
+    c_get_request_authorize :: FunPtr CRequestAuthorize -> CRequestAuthorize
 
 
 -- | Close a pending request for authorization. @UIHandle@ is a handle as
@@ -280,4 +237,4 @@ foreign import ccall "wrapper"
     c_mk_close_account_request :: CloseAccountRequest -> IO (FunPtr CloseAccountRequest)
 
 foreign import ccall "dynamic"
-    c_get_close_account_request :: FunPtr CloseAccountRequest -> IO CloseAccountRequest
+    c_get_close_account_request :: FunPtr CloseAccountRequest -> CloseAccountRequest
