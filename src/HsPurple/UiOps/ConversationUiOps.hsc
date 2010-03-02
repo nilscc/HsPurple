@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Structs.ConversationUiOps
+module HsPurple.UiOps.ConversationUiOps
     (
       ConversationUiOps (..)
     , MessageFlag (..)
@@ -36,7 +36,7 @@ import Foreign.C
 
 import Bindings.GLib
 
-import HsPurple.Structs.Util
+import HsPurple.UiOps.Util
 
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>

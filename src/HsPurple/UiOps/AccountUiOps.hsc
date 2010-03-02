@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Structs.AccountUiOps
+module HsPurple.UiOps.AccountUiOps
     (
       AccountUiOps (..)
     -- * Function types

@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Structs.EventLoopUiOps
+module HsPurple.UiOps.EventLoopUiOps
     (
       EventLoopUiOps (..)
     , InputCondition (..)
@@ -20,7 +20,9 @@ module HsPurple.Structs.EventLoopUiOps
 
 import Foreign
 import Foreign.C
-import System.Posix
+import System.IO
+import System.Posix.IO
+import System.Posix.Types
 
 
 fi :: (Integral a, Num b) => a -> b
@@ -50,7 +52,7 @@ data EventLoopUiOps = EventLoopUiOps
 data InputCondition = InputRead
                     | InputWrite
 
-type Handle   = Int
+type EventId  = Int
 type CBool    = CInt
 type UserData = Ptr ()
 type ErrPtr   = Ptr CInt
@@ -77,12 +79,12 @@ type CInputRemove       = CInt -> IO CBool
 type CInputGetError     = CInt -> ErrPtr -> IO CInt
 
 -- | Haskell function types
-type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO Int
-type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO Int
-type InputAdd           = Fd  -> InputCondition -> InputFunc -> UserData -> IO Int
-type TimeoutRemove      = Handle -> IO Bool
-type InputRemove        = Handle -> IO Bool
-type InputGetError      = Fd  -> ErrPtr -> IO Errno
+type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO EventId
+type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO EventId
+type InputAdd           = Handle -> InputCondition -> InputFunc -> UserData -> IO EventId
+type TimeoutRemove      = EventId -> IO Bool
+type InputRemove        = EventId -> IO Bool
+type InputGetError      = Handle -> ErrPtr -> IO Errno
 
 
 
@@ -111,10 +113,11 @@ cTimeoutAddSeconds f = \cui fp ud -> do
     fi `fmap` f (fi cui) gs ud
 
 cTimeoutRemove :: CTimeoutRemove -> TimeoutRemove
-cTimeoutRemove f = fmap ((1 :: CInt) ==) . f . fi
+cTimeoutRemove f = \i -> (1 ==) `fmap` f (fi i)
 
 cInputAdd :: CInputAdd -> InputAdd
-cInputAdd f = \(Fd i) c inf ud -> do
+cInputAdd f = \h c inf ud -> do
+    (Fd i) <- handleToFd h
     fp <- c_mk_input_func $ hInputFunc inf
     fi `fmap` f (fi i) (cond c) fp ud
 
@@ -126,7 +129,9 @@ cInputRemove :: CInputRemove -> InputRemove
 cInputRemove f = fmap ((1 :: CInt) ==) . f . fi
 
 cInputGetError :: CInputGetError -> InputGetError
-cInputGetError f = \(Fd i) ptr -> Errno `fmap` f i ptr
+cInputGetError f = \h ptr -> do
+    (Fd i) <- handleToFd h
+    Errno `fmap` f i ptr
 
 --------------------------------------------------------------------------------
 -- Haskell type functions to C type functions
@@ -158,9 +163,10 @@ hTimeoutRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
 hInputAdd :: InputAdd -> CInputAdd
-hInputAdd f = \ci1 ci2 cif ud ->
+hInputAdd f = \ci1 ci2 cif ud -> do
     let inf = c_get_input_func cif
-    in  fi `fmap` f (Fd $ fi ci1) (cond ci2) (cInputFunc inf) ud
+    h <- fdToHandle (Fd $ fi ci1)
+    fi `fmap` f h (cond ci2) (cInputFunc inf) ud
 
   where cond i = case i of
                       1 -> InputRead  -- 1 << 0
@@ -172,8 +178,9 @@ hInputRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
 hInputGetError :: InputGetError -> CInputGetError
-hInputGetError f = \ci ptr ->
-    unErrno `fmap` f (Fd $ fi ci) ptr
+hInputGetError f = \ci ptr -> do
+    h <- fdToHandle (Fd $ fi ci)
+    unErrno `fmap` f h ptr
   where unErrno (Errno e) = e
 
 

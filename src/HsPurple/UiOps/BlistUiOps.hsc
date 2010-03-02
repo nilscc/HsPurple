@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Structs.BlistUiOps
+module HsPurple.UiOps.BlistUiOps
     (
     ) where
 

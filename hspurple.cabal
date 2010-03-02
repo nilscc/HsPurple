@@ -14,9 +14,9 @@ cabal-version:  >= 1.6
 
 library
   exposed-modules:
-    HsPurple.Structs.AccountUiOps
-    HsPurple.Structs.ConversationUiOps
-    HsPurple.Structs.EventLoopUiOps
+    HsPurple.UiOps.AccountUiOps
+    HsPurple.UiOps.ConversationUiOps
+    HsPurple.UiOps.EventLoopUiOps
 
   build-depends:
     base >= 4 && < 5,
