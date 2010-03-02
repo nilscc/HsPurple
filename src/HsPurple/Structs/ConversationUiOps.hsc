@@ -1,9 +1,22 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Structs.Conversation
+module HsPurple.Structs.ConversationUiOps
     (
+      ConversationUiOps (..)
+    , MessageFlag (..)
+    , showMessageFlag
+    , readMessageFlag
+
+    -- * Function types
+    , CreateConversation
+    , DestroyConversation
+    , WriteChar
+    , WriteIM
     ) where
+
+import Data.Bits
+import Data.Maybe (fromMaybe)
 
 import Foreign
 import Foreign.C
@@ -41,7 +54,7 @@ type DestroyConversation = Conversation -> IO ()
 
 -- Write a message to a chat.  If this field is @c NULL, libpurple will
 -- fall back to using #write_conv.
-type WriteChar = Conversation -> Who -> Message -> MessageFlags -> CTime -> IO ()
+type WriteChar = Conversation -> Who -> Message -> [MessageFlag] -> CTime -> IO ()
 type Who = String
 type Message = String
 
@@ -55,7 +68,7 @@ type Message = String
 	                 time_t mtime);
 -}
 
-type WriteIM = Conversation -> Who -> Message -> MessageFlags -> CTime -> IO ()
+type WriteIM = Conversation -> Who -> Message -> [MessageFlag] -> CTime -> IO ()
 
 {-
 	/** Write a message to a conversation.  This is used rather than the
@@ -170,6 +183,14 @@ showMessageFlag MessageNotify = 0x2000
 showMessageFlag MessageNoLinkify = 0x4000
 showMessageFlag MessageInvisible = 0x8000
 
+hMessageFlags :: [MessageFlag] -> CInt
+hMessageFlags = fromMaybe 0 . foldr bitwiseOr Nothing . map Just
+
+  where bitwiseOr :: Maybe MessageFlag -> Maybe CInt -> Maybe CInt
+        bitwiseOr (Just mf) Nothing  = Just $ showMessageFlag mf
+        bitwiseOr (Just mf) (Just i) = Just $ showMessageFlag mf .|. i
+        bitwiseOr _ _ = error "hMessageFlags: No value"
+
 readMessageFlag :: CInt -> MessageFlag
 readMessageFlag 0x0001 = MessageSend
 readMessageFlag 0x0002 = MessageRecv
@@ -186,3 +207,26 @@ readMessageFlag 0x1000 = MessageImages
 readMessageFlag 0x2000 = MessageNotify
 readMessageFlag 0x4000 = MessageNoLinkify
 readMessageFlag 0x8000 = MessageInvisible
+readMessageFlag _      = error "readMessageFlag: Invalid MessageFlag"
+
+cMessageFlags :: CInt -> [MessageFlag]
+cMessageFlags ci = filter bitwiseAnd allMessageFlags 
+
+  where bitwiseAnd      :: MessageFlag -> Bool
+        bitwiseAnd mf   = 1 == showMessageFlag mf .&. ci
+        allMessageFlags = [ MessageSend
+                          , MessageRecv
+                          , MessageSystem
+                          , MessageAutoResp
+                          , MessageActiveOnly
+                          , MessageNick
+                          , MessageNoLog
+                          , MessageWhisper
+                          , MessageError
+                          , MessageDelayed
+                          , MessageRaw
+                          , MessageImages
+                          , MessageNotify
+                          , MessageNoLinkify
+                          , MessageInvisible
+                          ]

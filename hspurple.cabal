@@ -1,0 +1,32 @@
+name:           hspurple
+version:        0.1
+synopsis:       Haskell bindings for libpurple.
+description:
+  Haskell bindings for the C library \"libpurple\".
+license:        GPL-2
+license-file:   LICENSE
+author:         Nils Schweinsberg <mail@n-sch.de>
+maintainer:     Nils Schweinsberg <mail@n-sch.de>
+category:       Network
+
+build-type:     Simple
+cabal-version:  >= 1.6
+
+library
+  exposed-modules:
+    HsPurple.Structs.AccountUiOps
+    HsPurple.Structs.ConversationUiOps
+    HsPurple.Structs.EventLoopUiOps
+
+  build-depends:
+    base >= 4 && < 5,
+    unix >= 2 && < 3
+
+  ghc-prof-options: -auto-all
+  ghc-options: -Wall
+
+  hs-source-dirs: src
+
+source-repository head
+  type:         git
+  location:     git://github.com/mcmaniac/HsPurple.git

@@ -3,7 +3,7 @@
 
 module HsPurple.Structs.AccountUiOps
     (
-      AccountUiOps
+      AccountUiOps (..)
     -- * Function types
     , NotifyAdded
     , StatusChanged

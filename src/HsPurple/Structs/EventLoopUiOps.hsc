@@ -16,59 +16,10 @@ module HsPurple.Structs.EventLoopUiOps
 
     , GSourceFunc
     , InputFunc
-
-    , CTimeoutAdd
-    , CTimeoutAddSeconds
-    , CTimeoutRemove
-    , CInputAdd
-    , CInputRemove
-    , CInputGetError
-
-    , CGSourceFunc
-    , CInputFunc
-
-    -- * Function -> FunPtr
-    , c_mk_timeout_add
-    , c_mk_timeout_add_seconds
-    , c_mk_timeout_remove
-    , c_mk_input_add
-    , c_mk_input_remove
-    , c_mk_input_get_error
-
-    , c_mk_input_func
-    , c_mk_gsource_func
-
-    -- * FunPtr -> Function
-    , c_get_timeout_add
-    , c_get_timeout_add_seconds
-    , c_get_timeout_remove
-    , c_get_input_add
-    , c_get_input_remove
-    , c_get_input_get_error
-
-    , c_get_input_func
-    , c_get_gsource_func
-
-    -- * Haskell type -> C type
-    , hTimeoutAdd
-    , hTimeoutAddSeconds
-    , hTimeoutRemove
-    , hInputAdd
-    , hInputRemove
-    , hInputGetError
-
-    , hGSourceFunc
-    , hInputFunc
-
-    -- * C type -> Haskell type
-    , cGSourceFunc
-    , cInputFunc
     ) where
 
 import Foreign
 import Foreign.C
-import Foreign.Ptr
-import Foreign.Storable
 import System.Posix
 
 
@@ -190,6 +141,7 @@ hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (cond ci2)
   where cond i = case i of
                       1 -> InputRead  -- 1 << 0
                       2 -> InputWrite -- 1 << 1
+                      _ -> error "hInputFunc: Invalid InputCondition"
 
 hTimeoutAdd :: TimeoutAdd -> CTimeoutAdd
 hTimeoutAdd f = \ci cgs ud ->
@@ -208,11 +160,12 @@ hTimeoutRemove f = \ci ->
 hInputAdd :: InputAdd -> CInputAdd
 hInputAdd f = \ci1 ci2 cif ud ->
     let inf = c_get_input_func cif
-    in  fi `fmap` f (Fd $ fi ci1) (cond $ fi ci2) (cInputFunc inf) ud
+    in  fi `fmap` f (Fd $ fi ci1) (cond ci2) (cInputFunc inf) ud
 
   where cond i = case i of
                       1 -> InputRead  -- 1 << 0
                       2 -> InputWrite -- 1 << 1
+                      _ -> error "hInputAdd: Invalid InputCondition"
 
 hInputRemove :: InputRemove -> CInputRemove
 hInputRemove f = \ci ->
