@@ -4,7 +4,6 @@
 module HsPurple.UiOps.EventLoopUiOps
     (
       EventLoopUiOps (..)
-    , InputCondition (..)
 
     -- * Function types
     , TimeoutAdd
@@ -21,6 +20,7 @@ module HsPurple.UiOps.EventLoopUiOps
 import Foreign
 import Foreign.C
 import System.Posix
+import System.Event
 
 
 fi :: (Integral a, Num b) => a -> b
@@ -47,9 +47,6 @@ data EventLoopUiOps = EventLoopUiOps
 -- Data/type definitions
 --------------------------------------------------------------------------------
 
-data InputCondition = InputRead
-                    | InputWrite
-
 type EventId  = Int
 type CBool    = CInt
 type UserData = Ptr ()
@@ -57,14 +54,14 @@ type ErrPtr   = Ptr CInt
 
 -- From Bindings.GLib: @type C'GSourceFunc = FunPtr (C'gpointer -> IO C'gboolean)@
 type CGSourceFunc = UserData -> IO CInt
-type GSourceFunc  = UserData -> IO Int
+type GSourceFunc  = UserData -> IO Bool
 
 -- | The type of callbacks to handle events on file descriptors, as passed to
 -- purple_input_add().  The callback will receive the user_data passed to
 -- purple_input_add(), the file descriptor on which the event occurred, and the
 -- condition that was satisfied to cause the callback to be invoked.
 type CInputFunc = UserData -> CInt -> CInt -> IO ()
-type InputFunc  = UserData -> Int -> InputCondition -> IO ()
+type InputFunc  = UserData -> EventId -> Event -> IO ()
 
 
 
@@ -79,7 +76,7 @@ type CInputGetError     = CInt -> ErrPtr -> IO CInt
 -- | Haskell function types
 type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO EventId
 type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO EventId
-type InputAdd           = Fd  -> InputCondition -> InputFunc -> UserData -> IO EventId
+type InputAdd           = Fd  -> Event -> InputFunc -> UserData -> IO EventId
 type TimeoutRemove      = EventId -> IO Bool
 type InputRemove        = EventId -> IO Bool
 type InputGetError      = Fd  -> ErrPtr -> IO Errno
@@ -87,18 +84,25 @@ type InputGetError      = Fd  -> ErrPtr -> IO Errno
 
 
 --------------------------------------------------------------------------------
+-- Helper functions
+--------------------------------------------------------------------------------
+
+eventToInt :: Event -> Int
+eventToInt ev =
+    case filter ((ev ==) . snd) allEvents of
+         [(i,_)] -> i
+         _       -> 0
+  where allEvents = zip [1..3] $ map intToEvent [1..3]
+
+--------------------------------------------------------------------------------
 -- C type functions to Haskell type functions
 --------------------------------------------------------------------------------
 
 cGSourceFunc :: CGSourceFunc -> GSourceFunc
-cGSourceFunc f = fmap fi . f
+cGSourceFunc f = fmap (1==) . f
 
 cInputFunc :: CInputFunc -> InputFunc
-cInputFunc f = \u ci1 ci2 -> f u (fi ci1) (cond ci2)
-
-  where cond i = case i of
-                      InputRead  -> 1 -- 1 << 0
-                      InputWrite -> 2 -- 1 << 1
+cInputFunc f = \u i ev -> f u (fi i) (fi $ eventToInt ev)
 
 cTimeoutAdd :: CTimeoutAdd -> TimeoutAdd
 cTimeoutAdd f = \cui fp ud -> do
@@ -116,11 +120,7 @@ cTimeoutRemove f = \i -> (1 ==) `fmap` f (fi i)
 cInputAdd :: CInputAdd -> InputAdd
 cInputAdd f = \(Fd i) c inf ud -> do
     fp <- c_mk_input_func $ hInputFunc inf
-    fi `fmap` f (fi i) (cond c) fp ud
-
-  where cond i = case i of
-                      InputRead  -> 1
-                      InputWrite -> 2
+    fi `fmap` f (fi i) (fi $ eventToInt c) fp ud
 
 cInputRemove :: CInputRemove -> InputRemove
 cInputRemove f = fmap ((1 :: CInt) ==) . f . fi
@@ -133,15 +133,10 @@ cInputGetError f = \(Fd i) ptr -> Errno `fmap` f i ptr
 --------------------------------------------------------------------------------
 
 hGSourceFunc :: GSourceFunc -> CGSourceFunc
-hGSourceFunc f = fmap fi . f
+hGSourceFunc f = fmap (\b -> if b then 1 else 0) . f
 
 hInputFunc :: InputFunc -> CInputFunc
-hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (cond ci2)
-
-  where cond i = case i of
-                      1 -> InputRead  -- 1 << 0
-                      2 -> InputWrite -- 1 << 1
-                      _ -> error "hInputFunc: Invalid InputCondition"
+hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (intToEvent $ fi ci2)
 
 hTimeoutAdd :: TimeoutAdd -> CTimeoutAdd
 hTimeoutAdd f = \ci cgs ud ->
@@ -160,12 +155,7 @@ hTimeoutRemove f = \ci ->
 hInputAdd :: InputAdd -> CInputAdd
 hInputAdd f = \ci1 ci2 cif ud ->
     let inf = c_get_input_func cif
-    in  fi `fmap` f (Fd $ fi ci1) (cond ci2) (cInputFunc inf) ud
-
-  where cond i = case i of
-                      1 -> InputRead  -- 1 << 0
-                      2 -> InputWrite -- 1 << 1
-                      _ -> error "hInputAdd: Invalid InputCondition"
+    in  fi `fmap` f (Fd $ fi ci1) (intToEvent $ fi ci2) (cInputFunc inf) ud
 
 hInputRemove :: InputRemove -> CInputRemove
 hInputRemove f = \ci ->

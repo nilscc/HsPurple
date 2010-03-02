@@ -2,62 +2,60 @@
 
 module HsPurple.EventLoop
     (
-    -- * Event loop api
-      inputAdd
-    , inputRemove
+    -- * Types
+      EventLoopUiOps (..)
+    , defaultEventLoopUiOps
 
+    -- * Initialize UI Ops
+    , setEventUiOps
+    , getEventUiOps
+    , initEvents
+
+    -- * The Default Event Loop Functions
+    , inputAdd
+    , inputRemove
+    , inputGetError
     , timeoutAdd
     , timeoutAddSeconds
     , timeoutRemove
 
-    , getError
-    
-    -- * UI Registration Functions
-    , setUiOps
-    , getUiOps
-
-    -- * Types
-    , EventLoopUiOps (..)
-
     ) where
+
+import Control.Applicative
+import Control.Concurrent.MVar
 
 import Foreign
 import Foreign.C
-import Foreign.C.Error
-import Foreign.Ptr
-import Foreign.Storable
-import Foreign.Marshal.Alloc
 import System.Posix
+import System.Event
 
+import HsPurple.UiOps.EventLoopUiOps
 
-import HsPurple.Structs.EventLoopUiOps
-
+import qualified Data.Set as S
 
 type UserData = Ptr ()
-type Handle = Int
+type EventId = Int
+
+data IFd = IFd
+    { evId  :: EventId
+    , key   :: Either FdKey TimeoutKey
+    }
+
+instance Eq IFd where
+    a == b = evId a == evId b
+
+instance Ord IFd where
+    compare a b = evId a `compare` evId b
+
+data Events = Events
+    { eventManager      :: EventManager
+    , handles           :: MVar (S.Set IFd)
+    }
 
 
 --------------------------------------------------------------------------------
 -- Purple functions: Foreign imports
 --------------------------------------------------------------------------------
-
-foreign import ccall "purple_input_add"
-    c_input_add             :: CInputAdd
-
-foreign import ccall "purple_input_remove"
-    c_input_remove          :: CInputRemove
-
-foreign import ccall "purple_timeout_add"
-    c_timeout_add           :: CTimeoutAdd
-
-foreign import ccall "purple_timeout_add_seconds"
-    c_timeout_add_seconds   :: CTimeoutAddSeconds
-
-foreign import ccall "purple_timeout_remove"
-    c_timeout_remove        :: CTimeoutRemove
-
-foreign import ccall "purple_input_get_error"
-    c_get_error             :: CInputGetError
 
 foreign import ccall "purple_eventloop_set_ui_ops"
     c_set_ui_ops            :: Ptr EventLoopUiOps -> IO ()
@@ -68,63 +66,131 @@ foreign import ccall "purple_eventloop_get_ui_ops"
 
 
 --------------------------------------------------------------------------------
--- Purple functions: Haskell representations
+-- Helper functions
 --------------------------------------------------------------------------------
 
-fi :: (Integral a, Num b) => a -> b
-fi = fromIntegral
+incHandles :: MVar (S.Set IFd) -> Either FdKey TimeoutKey -> IO Int
+incHandles m key' = modifyMVar m $ \s ->
+    let newH n = (S.insert (IFd n key') s, n)
+    in  return . newH $ if S.null s
+                          then 0
+                          else evId (S.findMax s) + 1
+
+lookupFdk :: FdKey -> S.Set IFd -> Maybe Int
+lookupFdk fdk s =
+    case S.elems $ S.filter ((Left fdk ==) . key) s of
+         [IFd i _] -> Just i
+         _         -> Nothing
+
+lookupEventId :: EventId -> S.Set IFd -> Maybe (Either FdKey TimeoutKey)
+lookupEventId i s =
+    case S.elems $ S.filter ((i ==) . evId) s of
+         [IFd _ ifd] -> Just ifd
+         _           -> Nothing
+
+
+
+--------------------------------------------------------------------------------
+-- Setting up the Event loop
+--------------------------------------------------------------------------------
+
 
 -- | Add an input handler
-inputAdd :: Fd -> InputCondition -> InputFunc -> UserData -> IO Int
-inputAdd (Fd fd) cond func ud = do
+inputAdd :: Events -> Fd -> Event -> InputFunc -> UserData -> IO EventId
+inputAdd evs fd event func ud = do
 
-    cf <- c_mk_input_func (hInputFunc func)
-    fi `fmap` c_input_add fd cond' cf ud
+    putStrLn $ "HsPurple.EventLoop.inputAdd - Fd: " ++ show fd
 
-  where cond' = case cond of
-                     InputRead  -> 1 -- 1 << 0
-                     InputWrite -> 2 -- 1 << 1
+    registerFd (eventManager evs) callback fd event >>= incHandles (handles evs) . Left
+
+  where callback :: IOCallback
+        callback fdk ev = do
+            i <- lookupFdk fdk `fmap` readMVar (handles evs)
+            case i of
+                 Just i' -> func ud i' ev
+                 _       -> return ()
+
 
 -- | Remove a input handler
-inputRemove :: Handle -> IO Bool
-inputRemove h =
+inputRemove :: Events -> EventId -> IO Bool
+inputRemove ae h = do
 
-    (== 1) `fmap` c_input_remove (fi h)
+    putStr $ "HsPurple.EventLoop.inputRemove - Event: " ++ show h
+    fdk <- lookupEventId h `fmap` readMVar (handles ae)
+    case fdk of
+         Just (Left f) -> do unregisterFd (eventManager ae) f
+                             putStrLn " OK"
+                             return True
+         _             -> do putStrLn " Fail"
+                             return False
+
+-- | Get the current error status for an input.
+inputGetError :: Events -> Fd -> Ptr CInt -> IO Errno
+inputGetError _ _ _ = return $ Errno 0
 
 -- | Creates a callback timer.
-timeoutAdd :: Int -> GSourceFunc -> UserData -> IO Int
-timeoutAdd interval func ud = do
+timeoutAdd :: Events -> Int -> GSourceFunc -> UserData -> IO EventId
+timeoutAdd ae interval func ud = do
 
-    cf <- c_mk_gsourcefunc (hGSourceFunc func)
-    fi `fmap` c_timeout_add (fi interval) cf ud
+    putStrLn $ "HsPurple.EventLoop.timeoutAdd - Interval: " ++ show interval
+
+    registerTimeout (eventManager ae) interval callback >>= incHandles (handles ae) . Right
+
+  where callback :: TimeoutCallback -- type TimeoutCallback = IO ()
+        callback = () <$ func ud -- hmhmhm no this actually returns a Bool
 
 -- | Creates a callback timer.
-timeoutAddSeconds :: Int -> GSourceFunc -> UserData -> IO Int
-timeoutAddSeconds interval func ud = do
+timeoutAddSeconds :: Events -> Int -> GSourceFunc -> UserData -> IO EventId
+timeoutAddSeconds ae interval func ud =
 
-    cf <- c_mk_gsourcefunc (hGSourceFunc func)
-    fi `fmap` c_timeout_add_seconds (fi interval) cf ud
+    timeoutAdd ae (interval * 1000) func ud -- not sure... hmhm
 
 
 -- | Removes a timeout handler.
-timeoutRemove :: Handle -> IO Bool
-timeoutRemove h =
+timeoutRemove :: Events -> EventId -> IO Bool
+timeoutRemove ae h = do
 
-    (== 1) `fmap` c_timeout_remove (fi h)
+    putStr $ "HsPurple.EventLoop.timeoutRemove - Event: " ++ show h
+    k <- lookupEventId h `fmap` readMVar (handles ae)
+    case k of
+         Just (Right tk) -> do unregisterTimeout (eventManager ae) tk
+                               putStrLn " OK"
+                               return True
+         _               -> do putStrLn " Fail"
+                               return False
 
--- | Get the current error status for an input.
-getError :: Fd -> Ptr CInt -> IO Int
-getError (Fd fd) errPtr =
 
-    fi `fmap` c_get_error (fi fd) errPtr
+
+--------------------------------------------------------------------------------
+-- Initialize UI Ops
+--------------------------------------------------------------------------------
 
 -- | Sets the UI operations structure to be used for accounts.
-setUiOps :: EventLoopUiOps -> IO ()
-setUiOps eventLoopUiOps = do
+setEventUiOps :: EventLoopUiOps -> IO ()
+setEventUiOps eventLoopUiOps = do
     ptr     <- malloc
     poke ptr eventLoopUiOps
     c_set_ui_ops ptr
 
 -- | Returns the UI operations structure used for accounts.
-getUiOps :: IO (Ptr EventLoopUiOps)
-getUiOps = c_get_ui_ops
+getEventUiOps :: IO (Ptr EventLoopUiOps)
+getEventUiOps = c_get_ui_ops
+
+-- | The default event loop
+defaultEventLoopUiOps :: Events -> EventLoopUiOps
+defaultEventLoopUiOps ae = EventLoopUiOps
+    { timeout_add           = timeoutAdd ae
+    , timeout_add_seconds   = timeoutAddSeconds ae
+    , timeout_remove        = timeoutRemove ae
+    , input_add             = inputAdd ae
+    , input_remove          = inputRemove ae
+    , input_get_error       = inputGetError ae
+    }
+
+-- | Initiliaze the Eventloop.
+-- Returns the Events datatype and the main loop function
+initEvents :: IO (Events, IO ())
+initEvents = do
+    evMg <- System.Event.new
+    hand <- newMVar S.empty
+    return (Events evMg hand, loop evMg)
