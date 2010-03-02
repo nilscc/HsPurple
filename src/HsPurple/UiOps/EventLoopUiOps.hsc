@@ -20,9 +20,7 @@ module HsPurple.UiOps.EventLoopUiOps
 
 import Foreign
 import Foreign.C
-import System.IO
-import System.Posix.IO
-import System.Posix.Types
+import System.Posix
 
 
 fi :: (Integral a, Num b) => a -> b
@@ -81,10 +79,10 @@ type CInputGetError     = CInt -> ErrPtr -> IO CInt
 -- | Haskell function types
 type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO EventId
 type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO EventId
-type InputAdd           = Handle -> InputCondition -> InputFunc -> UserData -> IO EventId
+type InputAdd           = Fd  -> InputCondition -> InputFunc -> UserData -> IO EventId
 type TimeoutRemove      = EventId -> IO Bool
 type InputRemove        = EventId -> IO Bool
-type InputGetError      = Handle -> ErrPtr -> IO Errno
+type InputGetError      = Fd  -> ErrPtr -> IO Errno
 
 
 
@@ -116,8 +114,7 @@ cTimeoutRemove :: CTimeoutRemove -> TimeoutRemove
 cTimeoutRemove f = \i -> (1 ==) `fmap` f (fi i)
 
 cInputAdd :: CInputAdd -> InputAdd
-cInputAdd f = \h c inf ud -> do
-    (Fd i) <- handleToFd h
+cInputAdd f = \(Fd i) c inf ud -> do
     fp <- c_mk_input_func $ hInputFunc inf
     fi `fmap` f (fi i) (cond c) fp ud
 
@@ -129,9 +126,7 @@ cInputRemove :: CInputRemove -> InputRemove
 cInputRemove f = fmap ((1 :: CInt) ==) . f . fi
 
 cInputGetError :: CInputGetError -> InputGetError
-cInputGetError f = \h ptr -> do
-    (Fd i) <- handleToFd h
-    Errno `fmap` f i ptr
+cInputGetError f = \(Fd i) ptr -> Errno `fmap` f i ptr
 
 --------------------------------------------------------------------------------
 -- Haskell type functions to C type functions
@@ -163,10 +158,9 @@ hTimeoutRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
 hInputAdd :: InputAdd -> CInputAdd
-hInputAdd f = \ci1 ci2 cif ud -> do
+hInputAdd f = \ci1 ci2 cif ud ->
     let inf = c_get_input_func cif
-    h <- fdToHandle (Fd $ fi ci1)
-    fi `fmap` f h (cond ci2) (cInputFunc inf) ud
+    in  fi `fmap` f (Fd $ fi ci1) (cond ci2) (cInputFunc inf) ud
 
   where cond i = case i of
                       1 -> InputRead  -- 1 << 0
@@ -178,9 +172,8 @@ hInputRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
 hInputGetError :: InputGetError -> CInputGetError
-hInputGetError f = \ci ptr -> do
-    h <- fdToHandle (Fd $ fi ci)
-    unErrno `fmap` f h ptr
+hInputGetError f = \ci ptr ->
+    unErrno `fmap` f (Fd $ fi ci) ptr
   where unErrno (Errno e) = e
 
 
