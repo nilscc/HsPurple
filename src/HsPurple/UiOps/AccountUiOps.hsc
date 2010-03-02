@@ -19,6 +19,12 @@ import Foreign
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>
 
+
+--------------------------------------------------------------------------------
+-- The struct
+--------------------------------------------------------------------------------
+
+
 -- | Account UI operations, used to notify the user of status changes and when
 -- buddies add this account to their buddy lists.
 data AccountUiOps = AccountUiOps
@@ -28,9 +34,6 @@ data AccountUiOps = AccountUiOps
     , requestAuthorize      :: RequestAuthorize
     , closeAccountRequest   :: CloseAccountRequest
     }
-
-type Account = Ptr ()
-type Status = Ptr ()
 
 instance Storable AccountUiOps where
     sizeOf _    = #size    PurpleAccountUiOps
@@ -61,6 +64,15 @@ instance Storable AccountUiOps where
         (#poke PurpleAccountUiOps, _purple_reserved2) ptr nullPtr
         (#poke PurpleAccountUiOps, _purple_reserved3) ptr nullPtr
         (#poke PurpleAccountUiOps, _purple_reserved4) ptr nullPtr
+
+
+
+--------------------------------------------------------------------------------
+-- Function types
+--------------------------------------------------------------------------------
+
+type Account    = Ptr ()
+type Status     = Ptr ()
 
 type RemoteUser = String
 type ID         = String
