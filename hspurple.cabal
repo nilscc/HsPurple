@@ -14,11 +14,16 @@ cabal-version:  >= 1.6
 
 library
   exposed-modules:
+    HsPurple.Account
     HsPurple.Core
     HsPurple.EventLoop
+    HsPurple.Status
     HsPurple.UiOps.AccountUiOps
     HsPurple.UiOps.ConversationUiOps
     HsPurple.UiOps.EventLoopUiOps
+
+  other-modules:
+    HsPurple.Util
 
   build-depends:
     base >= 4 && < 5,

@@ -14,7 +14,6 @@ module HsPurple.Core
     ) where
 
 import Prelude hiding (init)
-import Foreign
 import Foreign.C
 
 --------------------------------------------------------------------------------

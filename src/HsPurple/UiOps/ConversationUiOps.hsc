@@ -36,7 +36,7 @@ import Foreign.C
 
 import Bindings.GLib
 
-import HsPurple.UiOps.Util
+import HsPurple.Util
 
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>

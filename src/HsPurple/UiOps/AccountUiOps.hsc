@@ -10,6 +10,10 @@ module HsPurple.UiOps.AccountUiOps
     , RequestAdd
     , RequestAuthorize
     , CloseAccountRequest
+
+    -- * More types
+    , AccountRequestAuthorizationCb
+    , UIHandle
     ) where
 
 import Foreign.C

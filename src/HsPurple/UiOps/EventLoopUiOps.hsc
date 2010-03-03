@@ -17,10 +17,11 @@ module HsPurple.UiOps.EventLoopUiOps
     , InputFunc
     ) where
 
+import Data.Monoid
 import Foreign
 import Foreign.C
 import System.Posix
-import System.Event
+import System.Event hiding (intToEvent)
 
 
 fi :: (Integral a, Num b) => a -> b
@@ -87,12 +88,19 @@ type InputGetError      = Fd  -> ErrPtr -> IO Errno
 -- Helper functions
 --------------------------------------------------------------------------------
 
+intToEvent :: Int -> Event
+intToEvent 1 = evtRead
+intToEvent 2 = evtWrite
+intToEvent 3 = mconcat [evtRead, evtWrite]
+intToEvent _ = mconcat []
+
 eventToInt :: Event -> Int
-eventToInt ev =
-    case filter ((ev ==) . snd) allEvents of
-         [(i,_)] -> i
-         _       -> 0
-  where allEvents = zip [1..3] $ map intToEvent [1..3]
+eventToInt ev
+    | ev == evtRead  = 1
+    | ev == evtWrite = 2
+    | ev == mconcat [evtRead, evtWrite] = 3
+    | otherwise = 0
+
 
 --------------------------------------------------------------------------------
 -- C type functions to Haskell type functions

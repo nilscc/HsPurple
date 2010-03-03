@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.UiOps.Util
+module HsPurple.Util
     (
     -- * GLib utils
       gListToList
