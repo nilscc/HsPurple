@@ -94,9 +94,9 @@ import Foreign.C
 
 import Bindings.GLib
 
-import HsPurple.UiOps.AccountUiOps
-import HsPurple.Util
-import HsPurple.Status
+import Network.HsPurple.UiOps.AccountUiOps
+import Network.HsPurple.Util
+import Network.HsPurple.Status
 
 
 
