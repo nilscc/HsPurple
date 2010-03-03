@@ -28,6 +28,9 @@ library
     event == 0.1,
     containers < 1
 
+  pkgconfig-depends:
+    purple
+
   ghc-prof-options: -auto-all
   ghc-options: -Wall
 
