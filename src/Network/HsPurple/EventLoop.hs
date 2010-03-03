@@ -29,7 +29,7 @@ import Foreign.C
 import System.Posix
 import System.Event
 
-import HsPurple.UiOps.EventLoopUiOps
+import Network.HsPurple.UiOps.EventLoopUiOps
 
 import qualified Data.Set as S
 

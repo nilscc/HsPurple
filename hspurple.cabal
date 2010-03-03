@@ -20,6 +20,7 @@ library
     Network.HsPurple.Status
     Network.HsPurple.UiOps.AccountUiOps
     Network.HsPurple.UiOps.ConversationUiOps
+    Network.HsPurple.UiOps.ConnectionUiOps
     Network.HsPurple.UiOps.EventLoopUiOps
 
   other-modules:
@@ -29,13 +30,15 @@ library
     base >= 4 && < 5,
     unix >= 2 && < 3,
     time >= 1 && < 2,
+    bindings-DSL >= 1 && < 2,
     bindings-glib == 0.1,
     event == 0.1,
     containers < 1
 
   pkgconfig-depends:
     purple >= 2.6 && < 3,
-    glib-2.0 >= 2.22.2
+    glib-2.0 >= 2.22.2,
+    gthread-2.0
 
   ghc-prof-options: -auto-all
   ghc-options: -Wall
