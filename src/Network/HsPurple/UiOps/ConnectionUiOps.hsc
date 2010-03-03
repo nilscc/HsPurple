@@ -1,4 +1,5 @@
 -- vim: ft=haskell
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Network.HsPurple.UiOps.ConnectionUiOps
