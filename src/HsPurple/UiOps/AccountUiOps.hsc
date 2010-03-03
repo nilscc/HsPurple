@@ -170,7 +170,6 @@ foreign import ccall "dynamic"
 type OnList      = Bool
 type UserData    = Ptr ()
 
--- typedef void (*PurpleAccountRequestAuthorizationCb)(void *);
 type AccountRequestAuthorizationCb = UIHandle -> IO ()
 
 type AuthorizeCb = UIHandle -> IO ()

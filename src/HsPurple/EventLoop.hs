@@ -99,7 +99,7 @@ lookupEventId i s =
 inputAdd :: Events -> Fd -> Event -> InputFunc -> UserData -> IO EventId
 inputAdd evs fd event func ud = do
 
-    putStrLn $ "HsPurple.EventLoop.inputAdd - Fd: " ++ show fd
+    -- putStrLn $ "HsPurple.EventLoop.inputAdd - Fd: " ++ show fd
 
     registerFd (eventManager evs) callback fd event >>= incHandles (handles evs) . Left
 
@@ -115,13 +115,13 @@ inputAdd evs fd event func ud = do
 inputRemove :: Events -> EventId -> IO Bool
 inputRemove ae h = do
 
-    putStr $ "HsPurple.EventLoop.inputRemove - Event: " ++ show h
+    -- putStr $ "HsPurple.EventLoop.inputRemove - Event: " ++ show h
     fdk <- lookupEventId h `fmap` readMVar (handles ae)
     case fdk of
          Just (Left f) -> do unregisterFd (eventManager ae) f
-                             putStrLn " OK"
+                             -- putStrLn " OK"
                              return True
-         _             -> do putStrLn " Fail"
+         _             -> do -- putStrLn " Fail"
                              return False
 
 -- | Get the current error status for an input.
@@ -132,7 +132,7 @@ inputGetError _ _ _ = return $ Errno 0
 timeoutAdd :: Events -> Int -> GSourceFunc -> UserData -> IO EventId
 timeoutAdd ae interval func ud = do
 
-    putStrLn $ "HsPurple.EventLoop.timeoutAdd - Interval: " ++ show interval
+    -- putStrLn $ "HsPurple.EventLoop.timeoutAdd - Interval: " ++ show interval
 
     registerTimeout (eventManager ae) interval callback >>= incHandles (handles ae) . Right
 
@@ -150,13 +150,13 @@ timeoutAddSeconds ae interval func ud =
 timeoutRemove :: Events -> EventId -> IO Bool
 timeoutRemove ae h = do
 
-    putStr $ "HsPurple.EventLoop.timeoutRemove - Event: " ++ show h
+    -- putStr $ "HsPurple.EventLoop.timeoutRemove - Event: " ++ show h
     k <- lookupEventId h `fmap` readMVar (handles ae)
     case k of
          Just (Right tk) -> do unregisterTimeout (eventManager ae) tk
-                               putStrLn " OK"
+                               -- putStrLn " OK"
                                return True
-         _               -> do putStrLn " Fail"
+         _               -> do -- putStrLn " Fail"
                                return False
 
 

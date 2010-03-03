@@ -17,21 +17,9 @@ import Prelude hiding (init)
 import Foreign
 import Foreign.C
 
-{- From core.h:
-
-gboolean purple_core_init(const char *ui);
-void purple_core_quit(void);
-gboolean purple_core_quit_cb(gpointer unused);
-const char *purple_core_get_version(void);
-const char *purple_core_get_ui(void);
-PurpleCore *purple_get_core(void);
-void purple_core_set_ui_ops(PurpleCoreUiOps *ops);
-PurpleCoreUiOps *purple_core_get_ui_ops(void);
-gboolean purple_core_migrate(void);
-gboolean purple_core_ensure_single_instance(void);
-GHashTable* purple_core_get_ui_info(void);
-
--}
+--------------------------------------------------------------------------------
+-- Foreign imports
+--------------------------------------------------------------------------------
 
 foreign import ccall "purple_core_init"
     c_init :: CString -> IO CInt
@@ -51,6 +39,10 @@ foreign import ccall "purple_core_get_ui"
 
 type UI = String
 
+
+--------------------------------------------------------------------------------
+-- Haskell functions
+--------------------------------------------------------------------------------
 
 -- | Initializes the core of purple.
 -- This will setup preferences for all the core subsystems.

@@ -103,6 +103,7 @@ instance Storable ConversationUiOps where
                                    (cCustomSmileyWrite custom_smiley_write)
                                    (cCustomSmileyClose custom_smiley_close)
                                    (cSendConfirm send_confirm)
+
     poke ptr (ConversationUiOps create_conversation
                                 destroy_conversation
                                 write_chat
@@ -364,14 +365,6 @@ foreign import ccall "wrapper"
 
 foreign import ccall "dynamic"
     c_get_present :: FunPtr Present -> Present
-
-{-
-	/** If this UI has a concept of focus (as in a windowing system) and
-	 *  this conversation has the focus, return @c TRUE; otherwise, return
-	 *  @c FALSE.
-	 */
-	gboolean (*has_focus)(PurpleConversation *conv);
--}
 
 -- If this UI has a concept of focus (as in a windowing system) and
 -- this conversation has the focus, return TRUE; otherwise, return FALSE.
