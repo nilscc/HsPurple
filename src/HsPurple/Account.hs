@@ -5,7 +5,7 @@ module HsPurple.Account
     -- * UiOps
       AccountUiOps (..)
 
-    -- * Account functions
+    -- * Account Functions
     , accountNew
     , accountDestroy
     , accountConnect
@@ -69,7 +69,7 @@ module HsPurple.Account
     , accountGetCurrentError
     , accountClearCurrentError
 
-    -- * Accounts functions
+    -- * Accounts Functions
     , accountsAdd
     , accountsRemove
     , accountsDelete
@@ -78,6 +78,15 @@ module HsPurple.Account
     , accountsGetAllActive
     , accountsFind
     , accountsRestoreCurrentStatuses
+
+    -- * UI Registration Functions
+    , setAccountUiOps
+    , getAccountUiOps
+
+    -- * Accounts Subsystem
+    , accountsGetHandle
+    , initAccounts
+    , uninitAccounts
     ) where
 
 import Foreign
@@ -97,6 +106,7 @@ import HsPurple.Status
 
 -- | We dont have a decent Account representation yet
 type Account        = Ptr ()
+type AccountHandle  = Ptr ()
 type Connection     = Ptr ()
 type UserData       = Ptr ()
 type Status         = Ptr ()
@@ -995,3 +1005,64 @@ foreign import ccall "purple_accounts_restore_current_statuses"
 -- what you're doing.
 accountsRestoreCurrentStatuses :: IO ()
 accountsRestoreCurrentStatuses = c_purple_accounts_restore_current_statuses
+
+
+
+
+
+--------------------------------------------------------------------------------
+-- UI Registration Functions
+--------------------------------------------------------------------------------
+
+-- void purple_accounts_set_ui_ops(PurpleAccountUiOps *ops);
+
+foreign import ccall "purple_accounts_set_ui_ops "
+    c_purple_accounts_set_ui_ops  :: Ptr AccountUiOps -> IO ()
+
+-- | Sets the UI operations structure to be used for accounts.
+setAccountUiOps :: AccountUiOps -> IO ()
+setAccountUiOps auiops = do
+    ptr <- malloc
+    poke ptr auiops
+    c_purple_accounts_set_ui_ops ptr
+
+-- PurpleAccountUiOps *purple_accounts_get_ui_ops(void);
+
+foreign import ccall "purple_accounts_get_ui_ops"
+    c_purple_accounts_get_ui_ops :: IO (Ptr AccountUiOps)
+
+-- | Returns the UI operations structure used for accounts.
+getAccountUiOps :: IO AccountUiOps
+getAccountUiOps = c_purple_accounts_get_ui_ops >>= peek
+
+
+--------------------------------------------------------------------------------
+-- Accounts Subsystem
+--------------------------------------------------------------------------------
+
+-- void *purple_accounts_get_handle(void);
+
+foreign import ccall "purple_accounts_get_handle"
+    c_purple_accounts_get_handle :: IO (Ptr ())
+
+-- | Returns the accounts subsystem handle.
+accountsGetHandle :: IO AccountHandle
+accountsGetHandle = c_purple_accounts_get_handle
+
+-- void purple_accounts_init(void);
+
+foreign import ccall "purple_accounts_init"
+    c_purple_accounts_init :: IO ()
+
+-- | Initializes the accounts subsystem.
+initAccounts :: IO ()
+initAccounts = c_purple_accounts_init
+
+-- void purple_accounts_uninit(void);
+
+foreign import ccall "purple_accounts_uninit"
+    c_purple_accounts_uninit :: IO ()
+
+-- | Uninitializes the accounts subsystem.
+uninitAccounts :: IO ()
+uninitAccounts = c_purple_accounts_uninit
