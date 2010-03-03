@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.UiOps.EventLoopUiOps
+module Network.HsPurple.UiOps.EventLoopUiOps
     (
       EventLoopUiOps (..)
 

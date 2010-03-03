@@ -14,16 +14,16 @@ cabal-version:  >= 1.6
 
 library
   exposed-modules:
-    HsPurple.Account
-    HsPurple.Core
-    HsPurple.EventLoop
-    HsPurple.Status
-    HsPurple.UiOps.AccountUiOps
-    HsPurple.UiOps.ConversationUiOps
-    HsPurple.UiOps.EventLoopUiOps
+    Network.HsPurple.Account
+    Network.HsPurple.Core
+    Network.HsPurple.EventLoop
+    Network.HsPurple.Status
+    Network.HsPurple.UiOps.AccountUiOps
+    Network.HsPurple.UiOps.ConversationUiOps
+    Network.HsPurple.UiOps.EventLoopUiOps
 
   other-modules:
-    HsPurple.Util
+    Network.HsPurple.Util
 
   build-depends:
     base >= 4 && < 5,
@@ -34,7 +34,8 @@ library
     containers < 1
 
   pkgconfig-depends:
-    purple
+    purple >= 2.6 && < 3,
+    glib-2.0 >= 2.22.2
 
   ghc-prof-options: -auto-all
   ghc-options: -Wall

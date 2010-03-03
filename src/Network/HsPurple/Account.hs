@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Account
+module Network.HsPurple.Account
     (
     -- * UiOps
       AccountUiOps (..)

@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface, GeneralizedNewtypeDeriving #-}
 
-module HsPurple.Status
+module Network.HsPurple.Status
     (
     -- * Status types
       StatusPrimitive (unStatusPrimitive)

@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.EventLoop
+module Network.HsPurple.EventLoop
     (
     -- * Types
       EventLoopUiOps (..)

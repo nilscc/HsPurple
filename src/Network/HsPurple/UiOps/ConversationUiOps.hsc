@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.UiOps.ConversationUiOps
+module Network.HsPurple.UiOps.ConversationUiOps
     (
       ConversationUiOps (..)
     , MessageFlag (..)

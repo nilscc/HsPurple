@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.Core
+module Network.HsPurple.Core
     (
     -- * Lowlevel core functions, incomplete
       init

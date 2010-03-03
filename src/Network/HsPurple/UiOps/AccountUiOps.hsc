@@ -1,7 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module HsPurple.UiOps.AccountUiOps
+module Network.HsPurple.UiOps.AccountUiOps
     (
       AccountUiOps (..)
     -- * Function types
@@ -78,18 +78,13 @@ instance Storable AccountUiOps where
 type Account    = Ptr ()
 type Status     = Ptr ()
 
-type RemoteUser = String
-type ID         = String
-type Alias      = String
-type Message    = String
-
 -- | A buddy who is already on this account's buddy list added this account to
 -- their buddy list.
 type NotifyAdded = Account
-                -> RemoteUser
-                -> ID
-                -> Alias
-                -> Message
+                -> String       -- ^ RemoteUser
+                -> String       -- ^ ID
+                -> String       -- ^ Alias
+                -> String       -- ^ Message
                 -> IO ()
 
 type CNotifyAdded = Account
@@ -136,10 +131,10 @@ foreign import ccall "dynamic"
 
 -- | Someone we don't have on our list added us; prompt to add them.
 type RequestAdd = Account
-               -> RemoteUser
-               -> ID
-               -> Alias
-               -> Message
+               -> String        -- ^ RemoteUser
+               -> String        -- ^ ID
+               -> String        -- ^ Alias
+               -> String        -- ^ Message
                -> IO ()
 
 type CRequestAdd = Account
@@ -171,7 +166,6 @@ foreign import ccall "wrapper"
 foreign import ccall "dynamic"
     c_get_request_add :: FunPtr CRequestAdd -> CRequestAdd
 
-type OnList      = Bool
 type UserData    = Ptr ()
 
 type AccountRequestAuthorizationCb = UIHandle -> IO ()
@@ -192,11 +186,11 @@ foreign import ccall "wrapper"
 -- UserData@, otherwise call @DenyCb UserData@, returns a UI-specific handle,
 -- as passed to "CloseAccountRequest".
 type RequestAuthorize = Account
-                     -> RemoteUser
-                     -> ID
-                     -> Alias
-                     -> Message
-                     -> OnList
+                     -> String      -- ^ RemoteUser
+                     -> String      -- ^ ID
+                     -> String      -- ^ Alias
+                     -> String      -- ^ Message
+                     -> Bool        -- ^ On list?
                      -> AuthorizeCb
                      -> DenyCb
                      -> UserData
