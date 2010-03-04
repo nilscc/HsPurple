@@ -746,7 +746,7 @@ foreign import ccall "purple_account_get_status_type_with_primitive"
 -- | Returns the account status type with the specified primitive. 
 accountGetStatusTypeWithPrimitive :: Account -> StatusPrimitive -> IO StatusType
 accountGetStatusTypeWithPrimitive a st =
-    c_purple_account_get_status_type_with_primitive a (fromIntegral $ unStatusPrimitive st)
+    c_purple_account_get_status_type_with_primitive a (fromIntegral st)
 
 -- PurplePresence *purple_account_get_presence(const PurpleAccount *account);
 
