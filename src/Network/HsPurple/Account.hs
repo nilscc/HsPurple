@@ -92,11 +92,11 @@ module Network.HsPurple.Account
 import Foreign
 import Foreign.C
 
-import Bindings.GLib
 
 import Network.HsPurple.UiOps.AccountUiOps
 import Network.HsPurple.Util
 import Network.HsPurple.Status
+import Network.HsPurple.GLib.GList
 
 
 
@@ -498,8 +498,8 @@ foreign import ccall "purple_account_set_status_types"
 
 -- | Sets the account's status types. 
 accountSetStatusTypes :: Account -> [StatusType] -> IO ()
-accountSetStatusTypes a lis = alloca $ \ptr -> do
-    ptr' <- listToGList ptr lis
+accountSetStatusTypes a lis = do
+    ptr' <- listToGList lis
     c_purple_account_set_status_types a ptr'
 
 -- void purple_account_set_status(PurpleAccount *account, const char *status_id,
@@ -530,9 +530,9 @@ accountSetStatusList :: Account
                      -> Bool        -- ^ Active
                      -> [Attr]      -- ^ Attributes (?)
                      -> IO ()
-accountSetStatusList a s b lis = alloca $ \ptr -> do
+accountSetStatusList a s b lis = do
     cs <- newCString s
-    ptr' <- listToGList ptr lis
+    ptr' <- listToGList lis
     c_purple_account_set_status_list a cs (if b then 1 else 0) ptr'
 
 -- void purple_account_clear_settings(PurpleAccount *account);
@@ -812,8 +812,8 @@ foreign import ccall "purple_account_add_buddies"
 
 -- | Adds a list of buddies to the server-side buddy list. 
 accountAddBuddies :: Account -> [Buddy] -> IO ()
-accountAddBuddies a lis = alloca $ \ptr -> do
-    ptr' <- listToGList ptr lis
+accountAddBuddies a lis = do
+    ptr' <- listToGList lis
     c_purple_account_add_buddies a ptr'
 
 -- void purple_account_remove_buddy(PurpleAccount *account, PurpleBuddy *buddy,
@@ -834,9 +834,9 @@ foreign import ccall "purple_account_remove_buddies"
 
 -- | Removes a list of buddies from the server-side buddy list. 
 accountRemoveBuddies :: Account -> [(Buddy, Group)] -> IO ()
-accountRemoveBuddies a lis = alloca $ \ptr1 -> alloca $ \ptr2 -> do
-    ptr1' <- listToGList ptr1 $ map fst lis -- buddies
-    ptr2' <- listToGList ptr2 $ map snd lis -- groups
+accountRemoveBuddies a lis = do
+    ptr1' <- listToGList $ map fst lis -- buddies
+    ptr2' <- listToGList $ map snd lis -- groups
     c_purple_account_remove_buddies a ptr1' ptr2'
 
 -- void purple_account_remove_group(PurpleAccount *account, PurpleGroup *group);
@@ -915,7 +915,7 @@ accountClearCurrentError = c_purple_account_clear_current_error
 void purple_accounts_add(PurpleAccount *account);
 -}
 
-foreign import ccall "purple_accounts_add "
+foreign import ccall "purple_accounts_add"
     c_purple_accounts_add  :: Account -> IO ()
 
 
@@ -934,7 +934,7 @@ accountsRemove = c_purple_accounts_remove
 
 -- void purple_accounts_delete(PurpleAccount *account);
 
-foreign import ccall "purple_accounts_delete "
+foreign import ccall "purple_accounts_delete"
     c_purple_accounts_delete  :: Account -> IO ()
 
 -- | Deletes an account.
@@ -1009,14 +1009,13 @@ accountsRestoreCurrentStatuses = c_purple_accounts_restore_current_statuses
 
 
 
-
 --------------------------------------------------------------------------------
 -- UI Registration Functions
 --------------------------------------------------------------------------------
 
 -- void purple_accounts_set_ui_ops(PurpleAccountUiOps *ops);
 
-foreign import ccall "purple_accounts_set_ui_ops "
+foreign import ccall "purple_accounts_set_ui_ops"
     c_purple_accounts_set_ui_ops  :: Ptr AccountUiOps -> IO ()
 
 -- | Sets the UI operations structure to be used for accounts.
@@ -1034,6 +1033,9 @@ foreign import ccall "purple_accounts_get_ui_ops"
 -- | Returns the UI operations structure used for accounts.
 getAccountUiOps :: IO AccountUiOps
 getAccountUiOps = c_purple_accounts_get_ui_ops >>= peek
+
+
+
 
 
 --------------------------------------------------------------------------------

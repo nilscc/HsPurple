@@ -34,9 +34,8 @@ import Data.Time.Clock.POSIX
 import Foreign
 import Foreign.C
 
-import Bindings.GLib
-
 import Network.HsPurple.Util
+import Network.HsPurple.GLib.GList
 
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>
@@ -282,8 +281,8 @@ hChatAddUsers f = \con ptr ci -> do
     f con lis (ci == 1)
 
 cChatAddUsers :: CChatAddUsers -> ChatAddUsers
-cChatAddUsers f = \con lis b -> alloca $ \ptr -> do
-    ptr' <- listToGList ptr lis
+cChatAddUsers f = \con lis b -> do
+    ptr' <- listToGList lis
     f con ptr' (if b then 1 else 0)
 
 
@@ -331,8 +330,8 @@ hChatRemoveUsers f = \con ptr -> do
     f con lis
 
 cChatRemoveUsers :: CChatRemoveUsers -> ChatRemoveUsers
-cChatRemoveUsers f = \con lis -> alloca $ \ptr -> do
-    ptr' <- listToGList ptr lis
+cChatRemoveUsers f = \con lis -> do
+    ptr' <- listToGList lis
     f con ptr'
 
 -- | Called when a users flags are changed

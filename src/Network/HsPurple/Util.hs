@@ -9,7 +9,7 @@ module Network.HsPurple.Util
 
 import Foreign
 
-import Bindings.GLib
+import Network.HsPurple.GLib.GList
 
 gListToList :: C'GList -> IO [Ptr ()]
 gListToList glis = do
@@ -31,10 +31,10 @@ gListToList glis = do
                                 | otherwise    -> do n <- peek (c'GList'next glis) >>= next
                                                      return $ a : n
 
-listToGList :: Ptr C'GList  -- ^ Pointer to store data in
-            -> [Ptr ()]
-            -> IO (Ptr C'GList)
-listToGList ptr [] = return ptr -- do nothing
-listToGList ptr (x:xs) = do
+listToGList :: [Ptr ()] -> IO (Ptr C'GList)
+listToGList lis = listToGList' (castPtr nullPtr) lis
+listToGList' :: Ptr C'GList -> [Ptr ()] -> IO (Ptr C'GList)
+listToGList' ptr []     = return ptr
+listToGList' ptr (x:xs) = do
     ptr' <- c'g_list_append ptr x
-    listToGList ptr' xs
+    listToGList' ptr' xs
