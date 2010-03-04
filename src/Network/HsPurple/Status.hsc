@@ -4,16 +4,17 @@
 
 module Network.HsPurple.Status
     (
-    -- * StatusPrimitive API
-      primitiveGetIdFromType
-    , primitiveGetNameFromType
-    , primitiveGetTypeFromId
+
+    -- * Status API
+      statusGetType
 
     -- * StatusType API
     , statusTypeGetPrimitive
 
-    -- * Status API
-    , statusGetType
+    -- * StatusPrimitive API
+    , primitiveGetIdFromType
+    , primitiveGetNameFromType
+    , primitiveGetTypeFromId
 
     -- * Enum: Status types
     , StatusPrimitive
