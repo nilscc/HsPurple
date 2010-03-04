@@ -21,7 +21,6 @@ library
     Network.HsPurple.Status
 
   other-modules:
-    Network.HsPurple.Util
     Network.HsPurple.GLib.GList
     Network.HsPurple.GLib.GHashTable
     Network.HsPurple.UiOps.AccountUiOps

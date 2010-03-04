@@ -14,6 +14,15 @@ module Network.HsPurple.Connection
     , ConnectionNetworkDisconnected
     , ConnectionReportDisconnectReason
 
+    -- * UI Registration Functions
+    , setConnectionUiOps
+    , getConnectionUiOps
+
+    -- * Connections Subsystem
+    , initConnections
+    , uninitConnections
+    , connectionsGetHandle
+
     -- * Connection API
     , connectionIsConnected
     , connectionDestroy
@@ -121,11 +130,12 @@ initConnections = c'purple_connections_init
 
 #ccall purple_connections_uninit , IO ()
 -- | Uninitializes the connections subsystem. 
+uninitConnections :: IO ()
 uninitConnections = c'purple_connections_uninit
 
 type ConnectionsHandle = Ptr()
 
-#ccall purple_connections_get_handle :: IO ConnectionsHandle
+#ccall purple_connections_get_handle , IO ConnectionsHandle
 -- | Returns the handle to the connections subsystem.
 connectionsGetHandle :: IO ConnectionsHandle
 connectionsGetHandle = c'purple_connections_get_handle
