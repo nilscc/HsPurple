@@ -94,7 +94,6 @@ import Foreign.C
 
 
 import Network.HsPurple.UiOps.AccountUiOps
-import Network.HsPurple.Util
 import Network.HsPurple.Status
 import Network.HsPurple.GLib.GList
 
@@ -291,13 +290,13 @@ foreign import ccall "purple_account_request_authorization"
                                            -> CString
                                            -> CString
                                            -> CInt
-                                           -> FunPtr AccountRequestAuthorizationCb
-                                           -> FunPtr AccountRequestAuthorizationCb
+                                           -> FunPtr RequestAuthorizationCb
+                                           -> FunPtr RequestAuthorizationCb
                                            -> UserData
                                            -> IO (Ptr ())
 
 foreign import ccall "wrapper"
-    c_mk_account_request_authorization_cb :: AccountRequestAuthorizationCb -> IO (FunPtr AccountRequestAuthorizationCb)
+    c_mk_account_request_authorization_cb :: RequestAuthorizationCb -> IO (FunPtr RequestAuthorizationCb)
 
 -- foreign import ccall "dynamic"
     -- c_get_account_request_authorization_cb :: FunPtr AccountRequestAuthorizationCb -> AccountRequestAuthorizationCb
@@ -310,8 +309,8 @@ accountRequestAuthorization :: Account
                             -> String    -- ^ Alias
                             -> String    -- ^ Message
                             -> Bool      -- ^ On list
-                            -> AccountRequestAuthorizationCb -- Auth callback
-                            -> AccountRequestAuthorizationCb -- Deny callback
+                            -> RequestAuthorizationCb -- Auth callback
+                            -> RequestAuthorizationCb -- Deny callback
                             -> UserData
                             -> IO UIHandle
 accountRequestAuthorization a s1 s2 s3 s4 b cb1 cb2 ud = do

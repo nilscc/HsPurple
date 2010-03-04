@@ -34,7 +34,6 @@ import Data.Time.Clock.POSIX
 import Foreign
 import Foreign.C
 
-import Network.HsPurple.Util
 import Network.HsPurple.GLib.GList
 
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)

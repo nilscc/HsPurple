@@ -133,9 +133,7 @@ instance Storable ConnectionUiOps where
     sizeOf _    = #size PurpleConnectionUiOps
     alignment _ = #alignof PurpleConnectionUiOps
     peek ptr    = get_ConnectionUiOps <$> peek (castPtr ptr)
-    poke ptr ui = do
-        c' <- mk_ConnectionUiOps ui
-        poke (castPtr ptr) c'
+    poke ptr ui = mk_ConnectionUiOps ui >>= poke (castPtr ptr)
 
 
 -- | Convert a ConnectionUiOps struct into its C representation
@@ -241,23 +239,23 @@ mk_NetworkDisconnected =
 get_ConnectProgress          :: C'ConnectProgress          -> ConnectProgress
 get_ConnectProgress f = \con s1 i1 i2 -> do
     cs1 <- newCString s1
-    (get'ConnectProgress f) con cs1 (fi i1) (fi i2)
+    (mK'ConnectProgress f) con cs1 (fi i1) (fi i2)
 
 get_Connected                :: C'Connected                -> Connected
-get_Connected = get'Connected
+get_Connected = mK'Connected
 
 get_Disconnected             :: C'Disconnected             -> Disconnected
-get_Disconnected = get'Disconnected
+get_Disconnected = mK'Disconnected
 
 get_Notice                   :: C'Notice                   -> Notice
 get_Notice f = \con s1 -> do
     cs1 <- newCString s1
-    (get'Notice f) con cs1
+    (mK'Notice f) con cs1
 
 {-
 get_ReportDisconnect         :: C'ReportDisconnect         -> ReportDisconnect
 get_ReportDisconnect f =
-    get'ReportDisconnect $ \con s1 -> do
+    mK'ReportDisconnect $ \con s1 -> do
         cs1 <- newCString s1
         f con cs1
 -}
@@ -265,15 +263,13 @@ get_ReportDisconnect f =
 get_ReportDisconnectReason   :: C'ReportDisconnectReason   -> ReportDisconnectReason
 get_ReportDisconnectReason f = \con ce s1 -> do
         cs1 <- newCString s1
-        (get'ReportDisconnectReason f) con ce cs1
+        (mK'ReportDisconnectReason f) con ce cs1
 
 get_NetworkConnected         :: C'NetworkConnected         -> NetworkConnected
-get_NetworkConnected =
-    get'NetworkConnected
+get_NetworkConnected = mK'NetworkConnected
 
 get_NetworkDisconnected      :: C'NetworkDisconnected      -> NetworkDisconnected
-get_NetworkDisconnected =
-    get'NetworkDisconnected
+get_NetworkDisconnected = mK'NetworkDisconnected
 
 
 

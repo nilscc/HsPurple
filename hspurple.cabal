@@ -19,6 +19,7 @@ library
     Network.HsPurple.EventLoop
     Network.HsPurple.Status
     Network.HsPurple.UiOps.AccountUiOps
+    Network.HsPurple.UiOps.CoreUiOps
     Network.HsPurple.UiOps.ConversationUiOps
     Network.HsPurple.UiOps.ConnectionUiOps
     Network.HsPurple.UiOps.EventLoopUiOps
@@ -26,6 +27,7 @@ library
   other-modules:
     Network.HsPurple.Util
     Network.HsPurple.GLib.GList
+    Network.HsPurple.GLib.GHashTable
 
   build-depends:
     base >= 4 && < 5,
