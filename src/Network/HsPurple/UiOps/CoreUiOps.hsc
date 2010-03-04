@@ -2,9 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Network.HsPurple.UiOps.CoreUiOps
-    (
-    ) where
+module Network.HsPurple.UiOps.CoreUiOps where
 
 import Control.Applicative
 import Foreign
@@ -21,11 +19,11 @@ import qualified Data.Map as M
 --------------------------------------------------------------------------------
 
 data CoreUiOps = CoreUiOps
-    { ui_prefs_init     :: UiPrefsInit
-    , debug_ui_init     :: DebugUiInit
-    , ui_init           :: UiInit
-    , quit              :: Quit
-    , get_ui_info       :: GetUiInfo
+    { ui_prefs_init     :: CoreUiPrefsInit
+    , debug_ui_init     :: CoreDebugUiInit
+    , ui_init           :: CoreUiInit
+    , quit              :: CoreQuit
+    , get_ui_info       :: CoreGetUiInfo
     }
 
 instance Storable CoreUiOps where
@@ -79,30 +77,30 @@ mK_CoreUiOps (C'PurpleCoreUiOps ui_p d ui_i q g _ _ _) =
 #callback Quit        , IO ()
 #callback GetUiInfo   , IO (Ptr <GHashTable>)
 
-type UiPrefsInit = IO ()
-type DebugUiInit = IO ()
-type UiInit      = IO ()
-type Quit        = IO ()
-type GetUiInfo   = IO (M.Map String String)
+type CoreUiPrefsInit = IO ()
+type CoreDebugUiInit = IO ()
+type CoreUiInit      = IO ()
+type CoreQuit        = IO ()
+type CoreGetUiInfo   = IO (M.Map String String)
 
-mk_UiPrefsInit :: UiPrefsInit -> IO C'UiPrefsInit 
+mk_UiPrefsInit :: CoreUiPrefsInit -> IO C'UiPrefsInit 
 mk_UiPrefsInit f = mk'UiPrefsInit f
-mk_DebugUiInit :: DebugUiInit -> IO C'DebugUiInit
+mk_DebugUiInit :: CoreDebugUiInit -> IO C'DebugUiInit
 mk_DebugUiInit f = mk'DebugUiInit f
-mk_UiInit :: UiInit -> IO C'UiInit
-mk_UiInit f      = mk'UiInit f
-mk_Quit :: Quit -> IO C'Quit
-mk_Quit f        = mk'Quit f
-mk_GetUiInfo :: GetUiInfo -> IO C'GetUiInfo
-mk_GetUiInfo f   = mk'GetUiInfo (f >>= stringMapToGHashTable)
+mk_UiInit :: CoreUiInit -> IO C'UiInit
+mk_UiInit f = mk'UiInit f
+mk_Quit :: CoreQuit -> IO C'Quit
+mk_Quit f = mk'Quit f
+mk_GetUiInfo :: CoreGetUiInfo -> IO C'GetUiInfo
+mk_GetUiInfo f = mk'GetUiInfo (f >>= stringMapToGHashTable)
 
-mK_UiPrefsInit :: C'UiPrefsInit -> UiPrefsInit
+mK_UiPrefsInit :: C'UiPrefsInit -> CoreUiPrefsInit
 mK_UiPrefsInit f = mK'UiPrefsInit f
-mK_DebugUiInit :: C'DebugUiInit -> DebugUiInit
+mK_DebugUiInit :: C'DebugUiInit -> CoreDebugUiInit
 mK_DebugUiInit f = mK'DebugUiInit f
-mK_UiInit      :: C'UiInit -> UiInit
+mK_UiInit :: C'UiInit -> CoreUiInit
 mK_UiInit f = mK'UiInit f
-mK_Quit        :: C'Quit -> Quit
+mK_Quit :: C'Quit -> CoreQuit
 mK_Quit f = mK'Quit f
-mK_GetUiInfo   :: C'GetUiInfo -> GetUiInfo
+mK_GetUiInfo :: C'GetUiInfo -> CoreGetUiInfo
 mK_GetUiInfo f = mK'GetUiInfo f >>= gHasHTableToStringMap

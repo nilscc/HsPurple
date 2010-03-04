@@ -1,9 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Network.HsPurple.UiOps.BlistUiOps
-    (
-    ) where
+module Network.HsPurple.UiOps.BlistUiOps where
 
 import Foreign
 import Foreign.C

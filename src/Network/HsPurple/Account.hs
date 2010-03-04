@@ -4,6 +4,20 @@ module Network.HsPurple.Account
     (
     -- * UiOps
       AccountUiOps (..)
+    , setAccountUiOps
+    , getAccountUiOps
+
+    -- * Function types
+    , AccountNotifyAdded
+    , AccountStatusChanged
+    , AccountRequestAdd
+    , AccountRequestAuthorize
+    , AccountCloseAccountRequest
+
+    -- * More types
+    , AccountRequestAuthorizationCb
+    , AccountAuthorizeCb
+    , AccountDenyCb
 
     -- * Account Functions
     , accountNew
@@ -79,10 +93,6 @@ module Network.HsPurple.Account
     , accountsFind
     , accountsRestoreCurrentStatuses
 
-    -- * UI Registration Functions
-    , setAccountUiOps
-    , getAccountUiOps
-
     -- * Accounts Subsystem
     , accountsGetHandle
     , initAccounts
@@ -104,11 +114,8 @@ import Network.HsPurple.GLib.GList
 --------------------------------------------------------------------------------
 
 -- | We dont have a decent Account representation yet
-type Account        = Ptr ()
 type AccountHandle  = Ptr ()
 type Connection     = Ptr ()
-type UserData       = Ptr ()
-type Status         = Ptr ()
 type StatusType     = Ptr ()
 type ProxyInfo      = Ptr ()
 type Attr           = Ptr ()
@@ -290,13 +297,13 @@ foreign import ccall "purple_account_request_authorization"
                                            -> CString
                                            -> CString
                                            -> CInt
-                                           -> FunPtr RequestAuthorizationCb
-                                           -> FunPtr RequestAuthorizationCb
+                                           -> FunPtr AccountRequestAuthorizationCb
+                                           -> FunPtr AccountRequestAuthorizationCb
                                            -> UserData
                                            -> IO (Ptr ())
 
 foreign import ccall "wrapper"
-    c_mk_account_request_authorization_cb :: RequestAuthorizationCb -> IO (FunPtr RequestAuthorizationCb)
+    c_mk_account_request_authorization_cb :: AccountRequestAuthorizationCb -> IO (FunPtr AccountRequestAuthorizationCb)
 
 -- foreign import ccall "dynamic"
     -- c_get_account_request_authorization_cb :: FunPtr AccountRequestAuthorizationCb -> AccountRequestAuthorizationCb
@@ -309,8 +316,8 @@ accountRequestAuthorization :: Account
                             -> String    -- ^ Alias
                             -> String    -- ^ Message
                             -> Bool      -- ^ On list
-                            -> RequestAuthorizationCb -- Auth callback
-                            -> RequestAuthorizationCb -- Deny callback
+                            -> AccountRequestAuthorizationCb -- Auth callback
+                            -> AccountRequestAuthorizationCb -- Deny callback
                             -> UserData
                             -> IO UIHandle
 accountRequestAuthorization a s1 s2 s3 s4 b cb1 cb2 ud = do
@@ -772,7 +779,7 @@ foreign import ccall "purple_account_get_status_types"
 -- | Returns the account's status types. 
 accountGetStatusTypes :: Account -> IO [StatusType]
 accountGetStatusTypes a =
-    c_purple_account_get_status_types a >>= peek >>= gListToList
+    c_purple_account_get_status_types a >>= gListToList
 
 -- PurpleLog *purple_account_get_log(PurpleAccount *account, gboolean create);
 
@@ -962,7 +969,7 @@ foreign import ccall "purple_accounts_get_all"
 -- | Returns a list of all accounts.
 accountsGetAll :: IO [Account]
 accountsGetAll =
-    c_purple_accounts_get_all >>= peek >>= gListToList
+    c_purple_accounts_get_all >>= gListToList
 
 -- GList *purple_accounts_get_all_active(void);
 
@@ -974,7 +981,7 @@ foreign import ccall "purple_accounts_get_all_active"
 -- the nodes.
 accountsGetAllActive :: IO [Account]
 accountsGetAllActive =
-    c_purple_accounts_get_all_active >>= peek >>= gListToList
+    c_purple_accounts_get_all_active >>= gListToList
 
 -- PurpleAccount *purple_accounts_find(const char *name, const char *protocol);
 

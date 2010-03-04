@@ -276,7 +276,7 @@ foreign import ccall "dynamic"
 
 hChatAddUsers :: ChatAddUsers -> CChatAddUsers
 hChatAddUsers f = \con ptr ci -> do
-    lis <- peek ptr >>= gListToList
+    lis <- gListToList ptr
     f con lis (ci == 1)
 
 cChatAddUsers :: CChatAddUsers -> ChatAddUsers
@@ -325,7 +325,7 @@ foreign import ccall "dynamic"
 
 hChatRemoveUsers :: ChatRemoveUsers -> CChatRemoveUsers
 hChatRemoveUsers f = \con ptr -> do
-    lis <- peek ptr >>= gListToList
+    lis <- gListToList ptr
     f con lis
 
 cChatRemoveUsers :: CChatRemoveUsers -> ChatRemoveUsers

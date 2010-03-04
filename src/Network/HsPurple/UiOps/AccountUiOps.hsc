@@ -2,22 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Network.HsPurple.UiOps.AccountUiOps
-    (
-      AccountUiOps (..)
-    -- * Function types
-    , NotifyAdded
-    , StatusChanged
-    , RequestAdd
-    , RequestAuthorize
-    , CloseAccountRequest
-
-    -- * More types
-    , RequestAuthorizationCb
-    , AuthorizeCb
-    , DenyCb
-    , UIHandle
-    ) where
+module Network.HsPurple.UiOps.AccountUiOps where
 
 import Control.Applicative
 import Foreign.C
@@ -42,11 +27,11 @@ type Status     = Ptr ()
 -- | Account UI operations, used to notify the user of status changes and when
 -- buddies add this account to their buddy lists.
 data AccountUiOps = AccountUiOps
-    { notifyAdded           :: NotifyAdded
-    , statusChanged         :: StatusChanged
-    , requestAdd            :: RequestAdd
-    , requestAuthorize      :: RequestAuthorize
-    , closeAccountRequest   :: CloseAccountRequest
+    { notifyAdded           :: AccountNotifyAdded
+    , statusChanged         :: AccountStatusChanged
+    , requestAdd            :: AccountRequestAdd
+    , requestAuthorize      :: AccountRequestAuthorize
+    , closeAccountRequest   :: AccountCloseAccountRequest
     }
 
 instance Storable AccountUiOps where
@@ -105,7 +90,7 @@ mk_AccountUiOps (AccountUiOps notify
 #callback NotifyAdded , Account -> CString -> CString -> CString -> CString -> IO ()
 -- | A buddy who is already on this account's buddy list added this account to
 -- their buddy list.
-type NotifyAdded = Account
+type AccountNotifyAdded = Account
                 -> String       -- ^ RemoteUser
                 -> String       -- ^ ID
                 -> String       -- ^ Alias
@@ -113,7 +98,7 @@ type NotifyAdded = Account
                 -> IO ()
 
 
-mK_NotifyAdded :: C'NotifyAdded -> NotifyAdded
+mK_NotifyAdded :: C'NotifyAdded -> AccountNotifyAdded
 mK_NotifyAdded f = \acc s1 s2 s3 s4 -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
@@ -121,7 +106,7 @@ mK_NotifyAdded f = \acc s1 s2 s3 s4 -> do
     cs4 <- newCString s4
     (mK'NotifyAdded f) acc cs1 cs2 cs3 cs4
 
-mk_NotifyAdded :: NotifyAdded -> IO C'NotifyAdded
+mk_NotifyAdded :: AccountNotifyAdded -> IO C'NotifyAdded
 mk_NotifyAdded f = mk'NotifyAdded $ \ptr cs1 cs2 cs3 cs4 -> do
     s1  <- peekCString cs1
     s2  <- peekCString cs2
@@ -132,24 +117,24 @@ mk_NotifyAdded f = mk'NotifyAdded $ \ptr cs1 cs2 cs3 cs4 -> do
 
 #callback StatusChanged , Account -> Status -> IO ()
 -- | This account's status changed
-type StatusChanged = Account -> Status -> IO ()
+type AccountStatusChanged = Account -> Status -> IO ()
 
-mk_StatusChanged :: StatusChanged -> IO C'StatusChanged
+mk_StatusChanged :: AccountStatusChanged -> IO C'StatusChanged
 mk_StatusChanged f = mk'StatusChanged $ \acc st -> f acc st
 
-mK_StatusChanged :: C'StatusChanged -> StatusChanged
+mK_StatusChanged :: C'StatusChanged -> AccountStatusChanged
 mK_StatusChanged f = mK'StatusChanged f
 
 #callback RequestAdd , Account -> CString -> CString -> CString -> CString -> IO ()
 -- | Someone we don't have on our list added us; prompt to add them.
-type RequestAdd = Account
+type AccountRequestAdd = Account
                -> String        -- ^ RemoteUser
                -> String        -- ^ ID
                -> String        -- ^ Alias
                -> String        -- ^ Message
                -> IO ()
 
-mK_RequestAdd :: C'RequestAdd -> RequestAdd
+mK_RequestAdd :: C'RequestAdd -> AccountRequestAdd
 mK_RequestAdd f = \acc s1 s2 s3 s4 -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
@@ -157,7 +142,7 @@ mK_RequestAdd f = \acc s1 s2 s3 s4 -> do
     cs4 <- newCString s4
     (mK'RequestAdd f) acc cs1 cs2 cs3 cs4
 
-mk_RequestAdd :: RequestAdd -> IO C'RequestAdd
+mk_RequestAdd :: AccountRequestAdd -> IO C'RequestAdd
 mk_RequestAdd f = mk'RequestAdd $ \ptr cs1 cs2 cs3 cs4 -> do
     s1  <- peekCString cs1
     s2  <- peekCString cs2
@@ -168,28 +153,28 @@ mk_RequestAdd f = mk'RequestAdd $ \ptr cs1 cs2 cs3 cs4 -> do
 type UserData    = Ptr ()
 
 #callback RequestAuthorizationCb , UIHandle -> IO ()
-type RequestAuthorizationCb = C'RequestAuthorizationCb
+type AccountRequestAuthorizationCb = C'RequestAuthorizationCb
 
-type AuthorizeCb = UIHandle -> IO ()
-type DenyCb      = UIHandle -> IO ()
+type AccountAuthorizeCb = UIHandle -> IO ()
+type AccountDenyCb      = UIHandle -> IO ()
 
 #callback RequestAuthorize , Account -> CString -> CString -> CString -> CString -> CInt -> <RequestAuthorizationCb> -> <RequestAuthorizationCb> -> UserData -> IO ()
 -- | Prompt for authorization when someone adds this account to their buddy
 -- list. To authorize them to see this account's presence, call a @AuthorizeCb
 -- UserData@, otherwise call @DenyCb UserData@, returns a UI-specific handle,
 -- as passed to "CloseAccountRequest".
-type RequestAuthorize = Account
+type AccountRequestAuthorize = Account
                      -> String      -- ^ RemoteUser
                      -> String      -- ^ ID
                      -> String      -- ^ Alias
                      -> String      -- ^ Message
                      -> Bool        -- ^ On list?
-                     -> AuthorizeCb
-                     -> DenyCb
+                     -> AccountAuthorizeCb
+                     -> AccountDenyCb
                      -> UserData
                      -> IO ()
 
-mk_RequestAuthorize :: RequestAuthorize -> IO C'RequestAuthorize
+mk_RequestAuthorize :: AccountRequestAuthorize -> IO C'RequestAuthorize
 mk_RequestAuthorize f = mk'RequestAuthorize $ \ptr cs1 cs2 cs3 cs4 ci fp1 fp2 ud -> do
     s1  <- peekCString cs1
     s2  <- peekCString cs2
@@ -200,7 +185,7 @@ mk_RequestAuthorize f = mk'RequestAuthorize $ \ptr cs1 cs2 cs3 cs4 ci fp1 fp2 ud
         f2 = mK'RequestAuthorizationCb fp2
     f ptr s1 s2 s3 s4 i f1 f2 ud
 
-mK_RequestAuthorize :: C'RequestAuthorize -> RequestAuthorize
+mK_RequestAuthorize :: C'RequestAuthorize -> AccountRequestAuthorize
 mK_RequestAuthorize f = \acc s1 s2 s3 s4 lis f1 f2 ud -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
@@ -214,10 +199,10 @@ mK_RequestAuthorize f = \acc s1 s2 s3 s4 lis f1 f2 ud -> do
 #callback CloseAccountRequest , UIHandle -> IO ()
 -- | Close a pending request for authorization. @UIHandle@ is a handle as
 -- returned by "RequestAuthorize".
-type CloseAccountRequest = UIHandle -> IO ()
+type AccountCloseAccountRequest = UIHandle -> IO ()
 
-mk_CloseAccountRequest :: CloseAccountRequest -> IO C'CloseAccountRequest
+mk_CloseAccountRequest :: AccountCloseAccountRequest -> IO C'CloseAccountRequest
 mk_CloseAccountRequest = mk'CloseAccountRequest
 
-mK_CloseAccountRequest :: C'CloseAccountRequest -> CloseAccountRequest
+mK_CloseAccountRequest :: C'CloseAccountRequest -> AccountCloseAccountRequest
 mK_CloseAccountRequest = mK'CloseAccountRequest

@@ -6,6 +6,16 @@ module Network.HsPurple.EventLoop
       EventLoopUiOps (..)
     , defaultEventLoopUiOps
 
+    -- * Function types
+    , EventTimeoutAdd
+    , EventTimeoutAddSeconds
+    , EventTimeoutRemove
+    , EventInputAdd
+    , EventInputRemove
+    , EventInputGetError
+    , EventGSourceFunc
+    , EventInputFunc
+
     -- * Initialize UI Ops
     , setEventUiOps
     , getEventUiOps
@@ -32,9 +42,6 @@ import System.Event
 import Network.HsPurple.UiOps.EventLoopUiOps
 
 import qualified Data.Set as S
-
-type UserData = Ptr ()
-type EventId = Int
 
 data IFd = IFd
     { evId  :: EventId
@@ -96,7 +103,7 @@ lookupEventId i s =
 
 
 -- | Add an input handler
-inputAdd :: Events -> Fd -> Event -> InputFunc -> UserData -> IO EventId
+inputAdd :: Events -> Fd -> Event -> EventInputFunc -> UserData -> IO EventId
 inputAdd evs fd event func ud = do
 
     -- putStrLn $ "HsPurple.EventLoop.inputAdd - Fd: " ++ show fd
@@ -129,7 +136,7 @@ inputGetError :: Events -> Fd -> Ptr CInt -> IO Errno
 inputGetError _ _ _ = return $ Errno 0
 
 -- | Creates a callback timer.
-timeoutAdd :: Events -> Int -> GSourceFunc -> UserData -> IO EventId
+timeoutAdd :: Events -> Int -> EventGSourceFunc -> UserData -> IO EventId
 timeoutAdd ae interval func ud = do
 
     -- putStrLn $ "HsPurple.EventLoop.timeoutAdd - Interval: " ++ show interval
@@ -140,7 +147,7 @@ timeoutAdd ae interval func ud = do
         callback = () <$ func ud -- hmhmhm no this actually returns a Bool
 
 -- | Creates a callback timer.
-timeoutAddSeconds :: Events -> Int -> GSourceFunc -> UserData -> IO EventId
+timeoutAddSeconds :: Events -> Int -> EventGSourceFunc -> UserData -> IO EventId
 timeoutAddSeconds ae interval func ud =
 
     timeoutAdd ae (interval * 1000) func ud -- not sure... hmhm

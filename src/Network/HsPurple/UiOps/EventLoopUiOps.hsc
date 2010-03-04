@@ -1,21 +1,7 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Network.HsPurple.UiOps.EventLoopUiOps
-    (
-      EventLoopUiOps (..)
-
-    -- * Function types
-    , TimeoutAdd
-    , TimeoutAddSeconds
-    , TimeoutRemove
-    , InputAdd
-    , InputRemove
-    , InputGetError
-
-    , GSourceFunc
-    , InputFunc
-    ) where
+module Network.HsPurple.UiOps.EventLoopUiOps where
 
 import Data.Monoid
 import Foreign
@@ -34,12 +20,12 @@ fi = fromIntegral
 
 -- | PurpleEventLoopUiOps struct representation
 data EventLoopUiOps = EventLoopUiOps
-    { timeout_add           :: TimeoutAdd
-    , timeout_add_seconds   :: TimeoutAddSeconds
-    , timeout_remove        :: TimeoutRemove
-    , input_add             :: InputAdd
-    , input_remove          :: InputRemove
-    , input_get_error       :: InputGetError
+    { timeout_add           :: EventTimeoutAdd
+    , timeout_add_seconds   :: EventTimeoutAddSeconds
+    , timeout_remove        :: EventTimeoutRemove
+    , input_add             :: EventInputAdd
+    , input_remove          :: EventInputRemove
+    , input_get_error       :: EventInputGetError
     }
 
 
@@ -55,14 +41,14 @@ type ErrPtr   = Ptr CInt
 
 -- From Bindings.GLib: @type C'GSourceFunc = FunPtr (C'gpointer -> IO C'gboolean)@
 type CGSourceFunc = UserData -> IO CInt
-type GSourceFunc  = UserData -> IO Bool
+type EventGSourceFunc  = UserData -> IO Bool
 
 -- | The type of callbacks to handle events on file descriptors, as passed to
 -- purple_input_add().  The callback will receive the user_data passed to
 -- purple_input_add(), the file descriptor on which the event occurred, and the
 -- condition that was satisfied to cause the callback to be invoked.
 type CInputFunc = UserData -> CInt -> CInt -> IO ()
-type InputFunc  = UserData -> EventId -> Event -> IO ()
+type EventInputFunc  = UserData -> EventId -> Event -> IO ()
 
 
 
@@ -75,12 +61,12 @@ type CInputRemove       = CInt -> IO CBool
 type CInputGetError     = CInt -> ErrPtr -> IO CInt
 
 -- | Haskell function types
-type TimeoutAdd         = Int -> GSourceFunc -> UserData -> IO EventId
-type TimeoutAddSeconds  = Int -> GSourceFunc -> UserData -> IO EventId
-type InputAdd           = Fd  -> Event -> InputFunc -> UserData -> IO EventId
-type TimeoutRemove      = EventId -> IO Bool
-type InputRemove        = EventId -> IO Bool
-type InputGetError      = Fd  -> ErrPtr -> IO Errno
+type EventTimeoutAdd         = Int -> EventGSourceFunc -> UserData -> IO EventId
+type EventTimeoutAddSeconds  = Int -> EventGSourceFunc -> UserData -> IO EventId
+type EventInputAdd           = Fd  -> Event -> EventInputFunc -> UserData -> IO EventId
+type EventTimeoutRemove      = EventId -> IO Bool
+type EventInputRemove        = EventId -> IO Bool
+type EventInputGetError      = Fd  -> ErrPtr -> IO Errno
 
 
 
@@ -106,70 +92,70 @@ eventToInt ev
 -- C type functions to Haskell type functions
 --------------------------------------------------------------------------------
 
-cGSourceFunc :: CGSourceFunc -> GSourceFunc
+cGSourceFunc :: CGSourceFunc -> EventGSourceFunc
 cGSourceFunc f = fmap (1==) . f
 
-cInputFunc :: CInputFunc -> InputFunc
+cInputFunc :: CInputFunc -> EventInputFunc
 cInputFunc f = \u i ev -> f u (fi i) (fi $ eventToInt ev)
 
-cTimeoutAdd :: CTimeoutAdd -> TimeoutAdd
+cTimeoutAdd :: CTimeoutAdd -> EventTimeoutAdd
 cTimeoutAdd f = \cui fp ud -> do
     gs <- c_mk_gsource_func $ hGSourceFunc fp
     fi `fmap` f (fi cui) gs ud
 
-cTimeoutAddSeconds :: CTimeoutAddSeconds -> TimeoutAddSeconds
+cTimeoutAddSeconds :: CTimeoutAddSeconds -> EventTimeoutAddSeconds
 cTimeoutAddSeconds f = \cui fp ud -> do
     gs <- c_mk_gsource_func $ hGSourceFunc fp
     fi `fmap` f (fi cui) gs ud
 
-cTimeoutRemove :: CTimeoutRemove -> TimeoutRemove
+cTimeoutRemove :: CTimeoutRemove -> EventTimeoutRemove
 cTimeoutRemove f = \i -> (1 ==) `fmap` f (fi i)
 
-cInputAdd :: CInputAdd -> InputAdd
+cInputAdd :: CInputAdd -> EventInputAdd
 cInputAdd f = \(Fd i) c inf ud -> do
     fp <- c_mk_input_func $ hInputFunc inf
     fi `fmap` f (fi i) (fi $ eventToInt c) fp ud
 
-cInputRemove :: CInputRemove -> InputRemove
+cInputRemove :: CInputRemove -> EventInputRemove
 cInputRemove f = fmap ((1 :: CInt) ==) . f . fi
 
-cInputGetError :: CInputGetError -> InputGetError
+cInputGetError :: CInputGetError -> EventInputGetError
 cInputGetError f = \(Fd i) ptr -> Errno `fmap` f i ptr
 
 --------------------------------------------------------------------------------
 -- Haskell type functions to C type functions
 --------------------------------------------------------------------------------
 
-hGSourceFunc :: GSourceFunc -> CGSourceFunc
+hGSourceFunc :: EventGSourceFunc -> CGSourceFunc
 hGSourceFunc f = fmap (\b -> if b then 1 else 0) . f
 
-hInputFunc :: InputFunc -> CInputFunc
+hInputFunc :: EventInputFunc -> CInputFunc
 hInputFunc f = \u ci1 ci2 -> f u (fi ci1) (intToEvent $ fi ci2)
 
-hTimeoutAdd :: TimeoutAdd -> CTimeoutAdd
+hTimeoutAdd :: EventTimeoutAdd -> CTimeoutAdd
 hTimeoutAdd f = \ci cgs ud ->
     let gs = c_get_gsource_func cgs
     in  fi `fmap` f (fi ci) (cGSourceFunc gs) ud
 
-hTimeoutAddSeconds :: TimeoutAddSeconds -> CTimeoutAddSeconds
+hTimeoutAddSeconds :: EventTimeoutAddSeconds -> CTimeoutAddSeconds
 hTimeoutAddSeconds f = \ci cgs ud ->
     let gs = c_get_gsource_func cgs
     in  fi `fmap` f (fi ci) (cGSourceFunc gs) ud
 
-hTimeoutRemove :: TimeoutRemove -> CTimeoutRemove
+hTimeoutRemove :: EventTimeoutRemove -> CTimeoutRemove
 hTimeoutRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
-hInputAdd :: InputAdd -> CInputAdd
+hInputAdd :: EventInputAdd -> CInputAdd
 hInputAdd f = \ci1 ci2 cif ud ->
     let inf = c_get_input_func cif
     in  fi `fmap` f (Fd $ fi ci1) (intToEvent $ fi ci2) (cInputFunc inf) ud
 
-hInputRemove :: InputRemove -> CInputRemove
+hInputRemove :: EventInputRemove -> CInputRemove
 hInputRemove f = \ci ->
     (\b -> if b then 1 else 0) `fmap` f (fi ci)
 
-hInputGetError :: InputGetError -> CInputGetError
+hInputGetError :: EventInputGetError -> CInputGetError
 hInputGetError f = \ci ptr ->
     unErrno `fmap` f (Fd $ fi ci) ptr
   where unErrno (Errno e) = e
