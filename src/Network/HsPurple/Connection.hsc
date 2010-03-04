@@ -90,6 +90,48 @@ fi :: (Integral a, Num b) => a -> b
 fi = fromIntegral
 
 
+
+--------------------------------------------------------------------------------
+-- UI Registration Functions
+--------------------------------------------------------------------------------
+
+#ccall purple_connections_set_ui_ops , Ptr <PurpleConnectionUiOps> -> IO ()
+-- | Sets the UI operations structure to be used for connections. 
+setConnectionUiOps :: ConnectionUiOps -> IO ()
+setConnectionUiOps ui = do
+    ptr <- malloc
+    poke ptr ui
+    c'purple_connections_set_ui_ops (castPtr ptr)
+
+#ccall purple_connections_get_ui_ops , IO (Ptr <PurpleConnectionUiOps>)
+-- | Returns the UI operations structure used for connections. 
+getConnectionUiOps :: IO ConnectionUiOps
+getConnectionUiOps = c'purple_connections_get_ui_ops >>= peek . castPtr
+
+
+
+--------------------------------------------------------------------------------
+-- Connections Subsystem
+--------------------------------------------------------------------------------
+
+#ccall purple_connections_init , IO ()
+-- | Initializes the connections subsystem. 
+initConnections :: IO ()
+initConnections = c'purple_connections_init
+
+#ccall purple_connections_uninit , IO ()
+-- | Uninitializes the connections subsystem. 
+uninitConnections = c'purple_connections_uninit
+
+type ConnectionsHandle = Ptr()
+
+#ccall purple_connections_get_handle :: IO ConnectionsHandle
+-- | Returns the handle to the connections subsystem.
+connectionsGetHandle :: IO ConnectionsHandle
+connectionsGetHandle = c'purple_connections_get_handle
+
+
+
 --------------------------------------------------------------------------------
 -- Connection API
 --------------------------------------------------------------------------------

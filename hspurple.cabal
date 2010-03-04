@@ -16,6 +16,7 @@ library
   exposed-modules:
     Network.HsPurple.Account
     Network.HsPurple.Core
+    Network.HsPurple.Connection
     Network.HsPurple.EventLoop
     Network.HsPurple.Status
 
