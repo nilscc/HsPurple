@@ -36,8 +36,57 @@ import Foreign.C
 #include <purple.h>
 #include <bindings.dsl.h>
 
+
+
 --------------------------------------------------------------------------------
--- Data types
+-- Status API
+--------------------------------------------------------------------------------
+
+type Status = Ptr()
+
+#ccall purple_status_get_type                       , Ptr () -> IO (Ptr ())
+-- | Returns the status's type.
+statusGetType :: Status -> IO StatusType
+statusGetType = c'purple_status_get_type
+
+
+
+--------------------------------------------------------------------------------
+-- StatusType API
+--------------------------------------------------------------------------------
+
+type StatusType = Ptr ()
+
+#ccall purple_status_type_get_primitive             , StatusType -> IO CInt
+-- | Returns the primitive type of a status type.
+statusTypeGetPrimitive :: StatusType -> IO StatusPrimitive
+statusTypeGetPrimitive = fmap fi . c'purple_status_type_get_primitive
+
+
+
+--------------------------------------------------------------------------------
+-- StatusPrimitive API
+--------------------------------------------------------------------------------
+
+#ccall purple_primitive_get_id_from_type            , CInt -> IO CString
+-- | Lookup the id of a primitive status type based on the type. 
+primitiveGetIdFromType :: StatusPrimitive -> IO String
+primitiveGetIdFromType t = c'purple_primitive_get_id_from_type (fi t) >>= peekCString
+
+#ccall purple_primitive_get_name_from_type          , CInt -> IO CString
+-- | Lookup the name of a primitive status type based on the type. 
+primitiveGetNameFromType :: StatusPrimitive -> IO String
+primitiveGetNameFromType t = c'purple_primitive_get_name_from_type (fi t) >>= peekCString
+
+#ccall purple_primitive_get_type_from_id            , CString -> IO CInt
+-- | Lookup the value of a primitive status type based on the id.
+primitiveGetTypeFromId :: String -> IO StatusPrimitive
+primitiveGetTypeFromId s = newCString s >>= fmap fi . c'purple_primitive_get_type_from_id
+
+
+
+--------------------------------------------------------------------------------
+-- Enums
 -------------------------------------------------------------------------------
 
 type StatusPrimitive = Int
@@ -80,50 +129,3 @@ statusNumPrimitives = c'PURPLE_STATUS_NUM_PRIMITIVES
 
 fi :: (Integral a, Num b) => a -> b
 fi = fromIntegral
-
-
-
---------------------------------------------------------------------------------
--- StatusPrimitive API
---------------------------------------------------------------------------------
-
-#ccall purple_primitive_get_id_from_type            , CInt -> IO CString
--- | Lookup the id of a primitive status type based on the type. 
-primitiveGetIdFromType :: StatusPrimitive -> IO String
-primitiveGetIdFromType t = c'purple_primitive_get_id_from_type (fi t) >>= peekCString
-
-#ccall purple_primitive_get_name_from_type          , CInt -> IO CString
--- | Lookup the name of a primitive status type based on the type. 
-primitiveGetNameFromType :: StatusPrimitive -> IO String
-primitiveGetNameFromType t = c'purple_primitive_get_name_from_type (fi t) >>= peekCString
-
-#ccall purple_primitive_get_type_from_id            , CString -> IO CInt
--- | Lookup the value of a primitive status type based on the id.
-primitiveGetTypeFromId :: String -> IO StatusPrimitive
-primitiveGetTypeFromId s = newCString s >>= fmap fi . c'purple_primitive_get_type_from_id
-
-
-
---------------------------------------------------------------------------------
--- StatusType API
---------------------------------------------------------------------------------
-
-type StatusType = Ptr ()
-
-#ccall purple_status_type_get_primitive             , StatusType -> IO CInt
--- | Returns the primitive type of a status type.
-statusTypeGetPrimitive :: StatusType -> IO StatusPrimitive
-statusTypeGetPrimitive = fmap fi . c'purple_status_type_get_primitive
-
-
-
---------------------------------------------------------------------------------
--- Status API
---------------------------------------------------------------------------------
-
-type Status = Ptr()
-
-#ccall purple_status_get_type                       , Ptr () -> IO (Ptr ())
--- | Returns the status's type.
-statusGetType :: Status -> IO StatusType
-statusGetType = c'purple_status_get_type
