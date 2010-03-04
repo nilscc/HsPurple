@@ -57,7 +57,7 @@ gHasHTableToStringMap ptr =
     (\a b -> M.fromList $ zip a b) <$> (c'g_hash_table_get_keys ptr   >>= makeStrings)
                                    <*> (c'g_hash_table_get_values ptr >>= makeStrings)
 
-  where makeStrings glist = mapM (peekCString . castPtr) =<< gListToList =<< peek glist
+  where makeStrings glist = mapM (peekCString . castPtr) =<< gListToList glist
 
 -- | Turn a Map with String keys/values into a GHashTable
 stringMapToGHashTable :: M.Map String String -> IO (Ptr C'GHashTable)
