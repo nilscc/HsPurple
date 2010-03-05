@@ -108,6 +108,9 @@ import Network.HsPurple.Status
 import Network.HsPurple.GLib.GList
 
 
+#include <purple.h>
+#include <bindings.dsl.h>
+
 
 --------------------------------------------------------------------------------
 -- Types
@@ -476,17 +479,17 @@ accountSetCheckMail a b =
 -- void purple_account_set_enabled(PurpleAccount *account, const char *ui,
 --                   gboolean value);
 
-foreign import ccall "purple_account_set_enabled"
-    c_purple_account_set_enabled :: Account -> CString -> CInt -> IO ()
-
+#ccall purple_account_set_enabled , Account -> CString -> CInt -> IO ()
 -- | Sets whether or not this account is enabled for the specified UI. 
 accountSetEnabled :: Account
                   -> String     -- UI
                   -> Bool
                   -> IO ()
 accountSetEnabled a s b = do
+    putStrLn "Running accountSetEnabled"
     cs <- newCString s
-    c_purple_account_set_enabled a cs (if b then 1 else 0)
+    c'purple_account_set_enabled a cs (if b then 1 else 0)
+    putStrLn "accountSetEnabled: OK"
 
 -- void purple_account_set_proxy_info(PurpleAccount *account, PurpleProxyInfo *info);
 
