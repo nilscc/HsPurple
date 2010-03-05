@@ -17,6 +17,7 @@ library
     Network.HsPurple.Account
     Network.HsPurple.Core
     Network.HsPurple.Connection
+    Network.HsPurple.Conversation
     Network.HsPurple.EventLoop
     Network.HsPurple.Status
 

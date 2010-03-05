@@ -1,33 +1,8 @@
 -- vim: ft=haskell
 {-# LANGUAGE ForeignFunctionInterface #-}
 
-module Network.HsPurple.UiOps.ConversationUiOps
-    (
-      ConversationUiOps (..)
-    , MessageFlag (..)
-    , showMessageFlag
-    , readMessageFlag
+module Network.HsPurple.UiOps.ConversationUiOps where
 
-    -- * Function types
-    , CreateConversation
-    , DestroyConversation
-    , WriteChat
-    , WriteIM
-    , WriteConv
-    , ChatAddUsers
-    , ChatRenameUser
-    , ChatRemoveUsers
-    , ChatUpdateUser
-    , Present
-    , HasFocus
-    , CustomSmileyAdd
-    , CustomSmileyWrite
-    , CustomSmileyClose
-    , SendConfirm
-    ) where
-
-import Data.Bits
-import Data.Maybe (fromMaybe)
 import Data.Time
 import Data.Time.Clock.POSIX
 
@@ -38,6 +13,11 @@ import Network.HsPurple.GLib.GList
 
 #let alignof t = "%lu", (unsigned long)offsetof(struct {char x__; t (y__); }, y__)
 #include <purple.h>
+
+type MessageFlag = Int
+
+fi :: (Integral a, Num b) => a -> b
+fi = fromIntegral
 
 -- | Conversation operations and events.
 --
@@ -167,7 +147,7 @@ foreign import ccall "dynamic"
 
 -- Write a message to a chat.  If this field is @c NULL, libpurple will
 -- fall back to using #write_conv.
-type WriteChat = Conversation -> Who -> Message -> [MessageFlag] -> UTCTime -> IO ()
+type WriteChat = Conversation -> Who -> Message -> MessageFlag -> UTCTime -> IO ()
 type CWriteChat = Conversation -> CString -> CString -> CInt -> CTime -> IO ()
 type Who = String
 type Message = String
@@ -183,7 +163,7 @@ hWriteChat f = \con cs1 cs2 ci ctime -> do
     s1 <- peekCString cs1
     s2 <- peekCString cs2
     let time = posixSecondsToUTCTime (realToFrac ctime :: POSIXTime)
-        mfs = cMessageFlags ci
+        mfs = fi ci
     f con s1 s2 mfs time
 
 cWriteChat :: CWriteChat -> WriteChat
@@ -191,13 +171,13 @@ cWriteChat f = \con s1 s2 mfs time -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
     let ctime = fromIntegral . (round :: (RealFrac a) => a -> Int) $ utcTimeToPOSIXSeconds time
-        ci    = hMessageFlags mfs
+        ci    = fi mfs
     f con cs1 cs2 ci ctime
 
 -- | Write a message to an IM conversation.  If this field is @c NULL,
 -- libpurple will fall back to using #write_conv.
 -- @see purple_conv_im_write()
-type WriteIM = Conversation -> Who -> Message -> [MessageFlag] -> UTCTime -> IO ()
+type WriteIM = Conversation -> Who -> Message -> MessageFlag -> UTCTime -> IO ()
 type CWriteIM = Conversation -> CString -> CString -> CInt -> CTime -> IO ()
 
 foreign import ccall "wrapper"
@@ -211,7 +191,7 @@ hWriteIM f = \con cs1 cs2 ci ctime -> do
     s1 <- peekCString cs1
     s2 <- peekCString cs2
     let time = posixSecondsToUTCTime $ realToFrac ctime
-        mfs  = cMessageFlags ci
+        mfs  = fi ci
     f con s1 s2 mfs time
 
 cWriteIM :: CWriteIM -> WriteIM
@@ -219,7 +199,7 @@ cWriteIM f = \con s1 s2 mfs time -> do
     cs1 <- newCString s1
     cs2 <- newCString s2
     let ctime = fromIntegral . (round :: (RealFrac a) => a -> Int) $ utcTimeToPOSIXSeconds time
-        ci    = hMessageFlags mfs
+        ci    = fi mfs
     f con cs1 cs2 ci ctime
 
 
@@ -228,7 +208,7 @@ cWriteIM f = \con s1 s2 mfs time -> do
 -- now know as y"), and as the fallback if #write_im and #write_chat
 -- are not implemented.  It should be implemented, or the UI will miss
 -- conversation error messages and your users will hate you.
-type WriteConv = Conversation -> Name -> Alias -> Message -> [MessageFlag] -> UTCTime -> IO ()
+type WriteConv = Conversation -> Name -> Alias -> Message -> MessageFlag -> UTCTime -> IO ()
 type CWriteConv = Conversation -> CString -> CString -> CString -> CInt -> CTime -> IO ()
 type Name = String
 type Alias = String
@@ -245,7 +225,7 @@ hWriteConv f = \con cs1 cs2 cs3 ci ctime -> do
     s2 <- peekCString cs2
     s3 <- peekCString cs3
     let time = posixSecondsToUTCTime $ realToFrac ctime
-        mfs  = cMessageFlags ci
+        mfs  = fi ci
     f con s1 s2 s3 mfs time
 
 cWriteConv :: CWriteConv -> WriteConv
@@ -254,7 +234,7 @@ cWriteConv f = \con s1 s2 s3 mfs time -> do
     cs2 <- newCString s2
     cs3 <- newCString s3
     let ctime = fromIntegral . (round :: (RealFrac a) => a -> Int) $ utcTimeToPOSIXSeconds time
-        ci    = hMessageFlags mfs
+        ci    = fi mfs
     f con cs1 cs2 cs3 ci ctime
 
 -- | Add buddies to a chat.
@@ -465,90 +445,3 @@ cSendConfirm :: CSendConfirm -> SendConfirm
 cSendConfirm f = \con s -> do
     cs <- newCString s
     f con cs
-
--- | Flags applicable to a message. Most will have send, recv or system.
-data MessageFlag
-    = MessageSend -- Outgoing message.
-    | MessageRecv -- Incoming message.
-    | MessageSystem -- System message.
-    | MessageAutoResp -- Auto response.
-    | MessageActiveOnly -- Hint to the UI that this message
-                        -- should not be shown in conversations
-                        -- which are only open for internal UI
-                        -- purposes (e.g. for contact-aware
-                        -- conversations).
-    | MessageNick -- Contains your nick.
-    | MessageNoLog -- Do not log.
-    | MessageWhisper -- Whispered message.
-    | MessageError -- Error message.
-    | MessageDelayed -- Delayed message.
-    | MessageRaw -- "Raw" message - don't apply formatting
-    | MessageImages -- Message contains images
-    | MessageNotify -- Message is a notification
-    | MessageNoLinkify -- Message should not be auto-linkified @since 2.1.0
-    | MessageInvisible -- Message should not be displayed
-
-showMessageFlag :: MessageFlag -> CInt
-showMessageFlag MessageSend = 0x0001
-showMessageFlag MessageRecv = 0x0002
-showMessageFlag MessageSystem = 0x0004
-showMessageFlag MessageAutoResp   = 0x0008
-showMessageFlag MessageActiveOnly = 0x0010
-showMessageFlag MessageNick = 0x0020
-showMessageFlag MessageNoLog = 0x0040
-showMessageFlag MessageWhisper = 0x0080
-showMessageFlag MessageError = 0x0200
-showMessageFlag MessageDelayed = 0x0400
-showMessageFlag MessageRaw = 0x0800
-showMessageFlag MessageImages = 0x1000
-showMessageFlag MessageNotify = 0x2000
-showMessageFlag MessageNoLinkify = 0x4000
-showMessageFlag MessageInvisible = 0x8000
-
-hMessageFlags :: [MessageFlag] -> CInt
-hMessageFlags = fromMaybe 0 . foldr bitwiseOr Nothing . map Just
-
-  where bitwiseOr :: Maybe MessageFlag -> Maybe CInt -> Maybe CInt
-        bitwiseOr (Just mf) Nothing  = Just $ showMessageFlag mf
-        bitwiseOr (Just mf) (Just i) = Just $ showMessageFlag mf .|. i
-        bitwiseOr _ _ = error "hMessageFlags: No value"
-
-readMessageFlag :: CInt -> MessageFlag
-readMessageFlag 0x0001 = MessageSend
-readMessageFlag 0x0002 = MessageRecv
-readMessageFlag 0x0004 = MessageSystem
-readMessageFlag 0x0008 = MessageAutoResp
-readMessageFlag 0x0010 = MessageActiveOnly
-readMessageFlag 0x0020 = MessageNick
-readMessageFlag 0x0040 = MessageNoLog
-readMessageFlag 0x0080 = MessageWhisper
-readMessageFlag 0x0200 = MessageError
-readMessageFlag 0x0400 = MessageDelayed
-readMessageFlag 0x0800 = MessageRaw
-readMessageFlag 0x1000 = MessageImages
-readMessageFlag 0x2000 = MessageNotify
-readMessageFlag 0x4000 = MessageNoLinkify
-readMessageFlag 0x8000 = MessageInvisible
-readMessageFlag _      = error "readMessageFlag: Invalid MessageFlag"
-
-cMessageFlags :: CInt -> [MessageFlag]
-cMessageFlags ci = filter bitwiseAnd allMessageFlags 
-
-  where bitwiseAnd      :: MessageFlag -> Bool
-        bitwiseAnd mf   = 1 == showMessageFlag mf .&. ci
-        allMessageFlags = [ MessageSend
-                          , MessageRecv
-                          , MessageSystem
-                          , MessageAutoResp
-                          , MessageActiveOnly
-                          , MessageNick
-                          , MessageNoLog
-                          , MessageWhisper
-                          , MessageError
-                          , MessageDelayed
-                          , MessageRaw
-                          , MessageImages
-                          , MessageNotify
-                          , MessageNoLinkify
-                          , MessageInvisible
-                          ]

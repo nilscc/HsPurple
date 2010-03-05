@@ -211,8 +211,7 @@ connectionGetDisplayName c = peekCString =<< c'purple_connection_get_display_nam
 connectionGetProtocolData :: Connection -> IO ProtocolData
 connectionGetProtocolData = c'purple_connection_get_protocol_data
 
-{-
-#call purple_connection_update_progress , Ptr () -> CString -> CInt -> CInt -> IO ()
+#ccall purple_connection_update_progress , Ptr () -> CString -> CInt -> CInt -> IO ()
 -- | Updates the connection progress. 
 connectionUpdateProgress :: Connection
                          -> String      -- ^ Text
@@ -222,7 +221,6 @@ connectionUpdateProgress :: Connection
 connectionUpdateProgress c s i1 i2 = do
     cs <- newCString s
     c'purple_connection_update_progress c cs (fi i1) (fi i2)
-    -}
 
 #ccall purple_connection_notice , Connection -> CString -> IO ()
 -- | Displays a connection-specific notice. 
