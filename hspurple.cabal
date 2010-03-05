@@ -20,6 +20,7 @@ library
     Network.HsPurple.Conversation
     Network.HsPurple.EventLoop
     Network.HsPurple.Status
+    Network.HsPurple.SavedStatuses
 
   other-modules:
     Network.HsPurple.GLib.GList
