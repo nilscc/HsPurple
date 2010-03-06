@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Network.HsPurple.Account

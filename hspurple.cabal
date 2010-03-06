@@ -15,12 +15,15 @@ cabal-version:  >= 1.6
 library
   exposed-modules:
     Network.HsPurple.Account
+    Network.HsPurple.Blist
     Network.HsPurple.Core
     Network.HsPurple.Connection
     Network.HsPurple.Conversation
     Network.HsPurple.EventLoop
+    Network.HsPurple.Plugin
     Network.HsPurple.Status
     Network.HsPurple.SavedStatuses
+    Network.HsPurple.SslConn
 
   other-modules:
     Network.HsPurple.GLib.GList
