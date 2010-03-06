@@ -12,7 +12,7 @@ module Network.HsPurple.EventLoop
     , EventTimeoutRemove
     , EventInputAdd
     , EventInputRemove
-    , EventInputGetError
+    -- , EventInputGetError
     , EventGSourceFunc
     , EventInputFunc
 
@@ -24,7 +24,7 @@ module Network.HsPurple.EventLoop
     -- * The Default Event Loop Functions
     , inputAdd
     , inputRemove
-    , inputGetError
+    -- , inputGetError
     , timeoutAdd
     , timeoutAddSeconds
     , timeoutRemove
@@ -153,9 +153,14 @@ inputRemove ae h = do
          _             -> do -- putStrLn $ "Network.HsPurple.EventLoop.inputRemove: No waiting event with id `" ++ show h ++ "'"
                              return False
 
+{- TODO
+
 -- | Get the current error status for an input.
 inputGetError :: Events -> Fd -> Ptr CInt -> IO Errno
-inputGetError _ _ _ = return $ Errno 0
+inputGetError _ _ _ = do
+    return $ Errno (0) -- TODO
+
+-}
 
 -- | Creates a callback timer.
 timeoutAdd :: Events -> Int -> EventGSourceFunc -> UserData -> IO EventId
@@ -217,7 +222,7 @@ defaultEventLoopUiOps ae = EventLoopUiOps
     , timeout_remove        = timeoutRemove ae
     , input_add             = inputAdd ae
     , input_remove          = inputRemove ae
-    , input_get_error       = inputGetError ae
+    -- , input_get_error       = inputGetError ae
     }
 
 -- | Initiliaze the Eventloop.
