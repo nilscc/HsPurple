@@ -7,7 +7,7 @@ import Data.Monoid
 import Foreign
 import Foreign.C
 import System.Posix
-import System.Event hiding (intToEvent)
+import System.Event
 
 
 fi :: (Integral a, Num b) => a -> b
@@ -25,7 +25,7 @@ data EventLoopUiOps = EventLoopUiOps
     , timeout_remove        :: EventTimeoutRemove
     , input_add             :: EventInputAdd
     , input_remove          :: EventInputRemove
-    -- , input_get_error       :: EventInputGetError
+    , input_get_error       :: EventInputGetError
     }
 
 
@@ -243,14 +243,14 @@ instance Storable EventLoopUiOps where
         t_rem   <- c_get_timeout_remove         `fmap` (#peek PurpleEventLoopUiOps, timeout_remove) ptr
         i_add   <- c_get_input_add              `fmap` (#peek PurpleEventLoopUiOps, input_add) ptr
         i_rem   <- c_get_input_remove           `fmap` (#peek PurpleEventLoopUiOps, input_remove) ptr
-        -- i_err   <- c_get_input_get_error        `fmap` (#peek PurpleEventLoopUiOps, input_get_error) ptr
+        i_err   <- c_get_input_get_error        `fmap` (#peek PurpleEventLoopUiOps, input_get_error) ptr
 
         return $ EventLoopUiOps (cTimeoutAdd t_add)
                                 (cTimeoutAddSeconds t_add_s)
                                 (cTimeoutRemove t_rem)
                                 (cInputAdd i_add)
                                 (cInputRemove i_rem)
-                                -- (cInputGetError i_err)
+                                (cInputGetError i_err)
 
     poke ptr x = do
 
@@ -260,7 +260,7 @@ instance Storable EventLoopUiOps where
 
         i_add   <- c_mk_input_add                   . hInputAdd          $ input_add x
         i_rem   <- c_mk_input_remove                . hInputRemove       $ input_remove x
-        -- i_err   <- c_mk_input_get_error             . hInputGetError     $ input_get_error x
+        i_err   <- c_mk_input_get_error             . hInputGetError     $ input_get_error x
 
         (#poke PurpleEventLoopUiOps, timeout_add)            ptr t_add
         (#poke PurpleEventLoopUiOps, timeout_add_seconds)    ptr t_add_s
@@ -268,8 +268,8 @@ instance Storable EventLoopUiOps where
 
         (#poke PurpleEventLoopUiOps, input_add)              ptr i_add
         (#poke PurpleEventLoopUiOps, input_remove)           ptr i_rem
-        -- (#poke PurpleEventLoopUiOps, input_get_error)        ptr i_err
-        (#poke PurpleEventLoopUiOps, input_get_error)        ptr nullFunPtr
+        (#poke PurpleEventLoopUiOps, input_get_error)        ptr i_err
+        -- (#poke PurpleEventLoopUiOps, input_get_error)        ptr nullFunPtr
 
         (#poke PurpleEventLoopUiOps, _purple_reserved2)      ptr nullPtr
         (#poke PurpleEventLoopUiOps, _purple_reserved3)      ptr nullPtr

@@ -20,11 +20,12 @@ module Network.HsPurple.EventLoop
     , setEventUiOps
     , getEventUiOps
     , initEvents
+    , Events (..)
 
     -- * The Default Event Loop Functions
     , inputAdd
     , inputRemove
-    -- , inputGetError
+    , inputGetError
     , timeoutAdd
     , timeoutAddSeconds
     , timeoutRemove
@@ -67,6 +68,14 @@ data Events = Events
 -- Purple functions: Foreign imports
 --------------------------------------------------------------------------------
 
+
+#include <sys/socket.h>
+#include <bindings.dsl.h>
+
+#ccall getsockopt , CInt -> CInt -> CInt -> Ptr CInt -> Ptr () -> IO CInt
+#num SOL_SOCKET
+#num SO_ERROR
+
 foreign import ccall "purple_eventloop_set_ui_ops"
     c_set_ui_ops            :: Ptr EventLoopUiOps -> IO ()
 
@@ -84,7 +93,7 @@ prepare :: MVar (S.Set IFd) -> IO (Either FdKey TimeoutKey -> IO (), EventId)
 prepare m = do
 
     eid <- modifyMVar m $ \s ->
-        let i = if S.null s then 0 else evId (S.findMax s) + 1
+        let i = if S.null s then 1 else evId (S.findMax s) + 1
         in return (S.insert (IFd i Nothing) s, i)
 
     let f k = modifyMVar_ m $ \s -> return $ S.insert (IFd eid (Just k)) s
@@ -153,14 +162,10 @@ inputRemove ae h = do
          _             -> do -- putStrLn $ "Network.HsPurple.EventLoop.inputRemove: No waiting event with id `" ++ show h ++ "'"
                              return False
 
-{- TODO
-
 -- | Get the current error status for an input.
 inputGetError :: Events -> Fd -> Ptr CInt -> IO Errno
-inputGetError _ _ _ = do
-    return $ Errno (0) -- TODO
-
--}
+inputGetError _ (Fd i) err =
+    allocaBytes (sizeOf err) $ fmap Errno . c'getsockopt i c'SOL_SOCKET c'SO_ERROR err
 
 -- | Creates a callback timer.
 timeoutAdd :: Events -> Int -> EventGSourceFunc -> UserData -> IO EventId
@@ -174,7 +179,7 @@ timeoutAdd ae interval func ud = do
 
   where callback :: EventId -> TimeoutCallback -- type TimeoutCallback = IO ()
         callback i = do
-            -- putStrLn $ "Network.HsPurple.EventLoop.timeoutAdd - Callback: `" ++ show i ++ "'"
+            -- timeoutAdd ae interval func ud
             b <- safe' False (func ud)
             unless b $ () <$ timeoutRemove ae i
 
@@ -222,7 +227,7 @@ defaultEventLoopUiOps ae = EventLoopUiOps
     , timeout_remove        = timeoutRemove ae
     , input_add             = inputAdd ae
     , input_remove          = inputRemove ae
-    -- , input_get_error       = inputGetError ae
+    , input_get_error       = inputGetError ae
     }
 
 -- | Initiliaze the Eventloop.

@@ -3,6 +3,34 @@
 
 module Network.HsPurple.SslConn
     (
+    -- * Subsystem API
+      initSsl
+    , uninitSsl
+    , sslSetOps
+    , sslGetOps
+
+    -- * SSL API
+    , sslIsSupported
+    , sslStrError
+    , sslConnect
+    , sslConnectWithSslCn
+    , sslConnectFd
+    , sslConnectWithHostFd
+    , sslInputAdd
+    , sslClose
+    , sslRead
+    , sslWrite
+    , sslGetPeerCertificates
+
+    -- * Function types
+    , SslInputFunction
+    , SslErrorFunction
+
+    -- * Enums
+    , SslErrorType
+    , sslHandshakeFailed
+    , sslConnectFailed
+    , sslCertificateInvalid
     ) where
 
 import Foreign
@@ -13,7 +41,7 @@ import System.Posix
 #include <purple.h>
 #include <bindings.dsl.h>
 
-type SslOps = Ptr ()
+type SslOps = Ptr () -- TODO!
 type SslConnection = Ptr ()
 type UserData = Ptr ()
 type Account = Ptr ()
@@ -29,13 +57,13 @@ type InputCondition = Int
 
 #ccall purple_ssl_init , IO ()
 -- | Initializes the SSL subsystem. 
-sslInit :: IO ()
-sslInit = c'purple_ssl_init
+initSsl :: IO ()
+initSsl = c'purple_ssl_init
 
 #ccall purple_ssl_uninit , IO ()
 -- | Uninitializes the SSL subsystem. 
-sslUninit :: IO ()
-sslUninit = c'purple_ssl_uninit
+uninitSsl :: IO ()
+uninitSsl = c'purple_ssl_uninit
 
 #ccall purple_ssl_set_ops , SslOps -> IO ()
 -- | Sets the current SSL operations structure. 
@@ -59,8 +87,8 @@ sslIsSupported = fmap (1 ==) c'purple_ssl_is_supported
 
 #ccall purple_ssl_strerror , CInt -> IO CString
 -- | Returns a human-readable string for an SSL error. 
-sslStrerror :: SslErrorType -> IO String
-sslStrerror et = c'purple_ssl_strerror (fromIntegral et) >>= peekCString
+sslStrError :: SslErrorType -> IO String
+sslStrError et = c'purple_ssl_strerror (fromIntegral et) >>= peekCString
 
 {-
 00045 typedef void (*PurpleSslInputFunction)(gpointer, PurpleSslConnection *,
